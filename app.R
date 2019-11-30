@@ -45,9 +45,17 @@ ui <- fluidPage(
        tabPanel("使用说明", 
                 helpText("1, 上传文件时采用 UTF-8 编码.", br(), 
                          "2, 上传文件到生成参考文献样式,需要花一定时间,还请耐心等待.",br(), 
-                         "3, 最终输出的参考文献结果还需要仔细检查,符合期刊要求."))
+                         "3, 最终输出的参考文献结果还需要仔细检查,符合期刊要求.")),
+       tabPanel("清空缓存or显示文件", 
+                helpText("注意:是否清空缓存,"),
+                actionButton("goButton3", "Submit"),
+                verbatimTextOutput("b3"),
+                helpText("注意:这里是显示当前目录的所有文件和目录"),
+                actionButton("goButton4", "Submit"),
+                verbatimTextOutput("b4"))
         )
 )
+    
 # Define server logic required to draw a histogram
 server <- function(input, output) {
     ###0. 处理 bib 文件与 csl 文件
@@ -91,7 +99,6 @@ server <- function(input, output) {
     writeLines(file_finally_default,"./file_finally_default.Rmd")
     return(list(rmd_order_label,set_command_diff))
     })
-  
 
   yangshi = reactive({
     data_list = randomVals()
@@ -151,7 +158,28 @@ server <- function(input, output) {
     yangshi_list = list(yangshi1_list,yangshi2_list, jinggao)  # 以 list 形式输出
 
     })
-
+   
+  clear_file_now = eventReactive(input$goButton3,{
+    now_dir= list.files()
+    delete_file = list.files(path = ".", pattern = '(.*\\.Rmd$)|(.*\\.tex$)|(.*\\.bib$)|(.*\\.csl$)|(.*\\.md$)|(.*\\.docx$)(.*\\.pdf$)(.*\\.html$)')
+    for(i in delete_file){
+      if(!file_test("-d", i)){#不是目录则删除
+        file.remove(i)
+      }
+    }
+    file.remove("file_finally_default.pdf")
+    d_file = list.files()
+    exist_file = setdiff(d_file, c("app.R","packrat"))
+    if(length(exist_file) == 0){
+      paste("是的,已经清空缓存")
+    }else {
+      paste(exist_file,collapse = '\n')
+    }
+  })
+  list_file_now = eventReactive(input$goButton4,{
+    now_dir= list.files()
+    paste(now_dir,collapse = '\n')
+  })
    ## 输出文件
   output$b0 <- renderText({
     d1 = randomVals()[[2]]
@@ -173,6 +201,12 @@ server <- function(input, output) {
    })
    output$clip2 <- renderUI({
      rclipButton("clipbtn2", "rclipButton Copy", yangshi()[[2]], icon("clipboard"))
+   })
+   output$b3 <- renderText({
+     clear_file_now()
+   })
+   output$b4 <- renderText({
+     list_file_now()
    })
 }
 
