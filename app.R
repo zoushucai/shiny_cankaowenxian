@@ -167,13 +167,16 @@ server <- function(input, output) {
         file.remove(i)
       }
     }
-    file.remove("file_finally_default.pdf")
+    if (file.exists("file_finally_default.pdf")){
+      file.remove("file_finally_default.pdf")
+    }
+  
     d_file = list.files()
-    exist_file = setdiff(d_file, c("app.R","packrat"))
+    exist_file = setdiff(d_file, c("app.R","packrat","rsconnect","shiny_cankaowenxian.Rproj"))
     if(length(exist_file) == 0){
       paste("是的,已经清空缓存")
     }else {
-      paste(exist_file,collapse = '\n')
+      paste0("没有清空缓存,还有以下文件没有删除\n\n",paste(exist_file,collapse = '\n'))
     }
   })
   list_file_now = eventReactive(input$goButton4,{
