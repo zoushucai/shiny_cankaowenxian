@@ -6,12 +6,13 @@ library(rmarkdown)
 library(purrr)
 library(dplyr)
 library(tinytex)
+
 #options(shiny.fullstacktrace = TRUE)
 options(shiny.sanitize.errors = FALSE)
 rm(list = ls())
 now_dir= list.files()
 
-old_dir = dir(pattern='(.*\\.R$)|(.*\\.Rproj$)|(^navigation_default_orgin.csl$)|(^MEMIO_default_orgin.bib)|(^MEMIO.tex$)|(^navigation_default.csl$)|(^MEMIO_default.bib$)')
+old_dir = dir(pattern='(.*\\.R$)|(.*\\.Rproj$)|(^navigation_default_orgin.csl$)|(^MEMIO_default_orgin.bib)|(^MEMIO.tex$)|(^navigation_default.csl$)|(^MEMIO_default.bib$)|(^unicode-math.sty$)')
 
 delete_dir = setdiff(now_dir,old_dir)
 for(i in delete_dir){
@@ -42,12 +43,12 @@ ui <- fluidPage(
                  verbatimTextOutput("b0")),
         tabPanel("style 1", 
                  helpText("注意:最终的结果可能还需要细调"),
-                 uiOutput("clip1"), 
-                 verbatimTextOutput("b1")),
+                 uiOutput("style1clip"), 
+                 verbatimTextOutput("style1")),
         tabPanel("style 2", 
                  helpText("注意:最终的结果可能还需要细调"),
-                 uiOutput("clip2"), 
-                 verbatimTextOutput("b2")),
+                 uiOutput("style2clip"), 
+                 verbatimTextOutput("style2")),
        tabPanel("引用bib和key", 
                 fluidRow(
                   column(12,
@@ -72,8 +73,8 @@ ui <- fluidPage(
                 fluidRow(
                   column(9, p('未引用bib'), wellPanel(
                     uiOutput("bib02noyinyongclip"), 
-                    verbatimTextOutput("bib02noyinyong"), 
-                  )),
+                    verbatimTextOutput("bib02noyinyong")
+                   )),
                   column(3, p('未引用key'), wellPanel(
                     uiOutput("key02noyinyongclip"), 
                     verbatimTextOutput("key02noyinyong")
@@ -81,19 +82,24 @@ ui <- fluidPage(
                 )
 
        ),
-       # tabPanel("未引用bib文件", 
-       #          helpText("输出未引用的bib文件")
-       #          # ,uiOutput("bib02noyinyongclip"), 
-       #          # verbatimTextOutput("bib02noyinyong"), 
-       # ),
        
        tabPanel("清空缓存", 
                 p("是否要清空缓存"),
                 actionButton("goButton3", "Submit"),
-                verbatimTextOutput("b3"),
+                verbatimTextOutput("clearvar"),
                 p("是否显示当前目录的所有文件及目录"),
                 actionButton("goButton4", "Submit"),
-                verbatimTextOutput("b4"))
+                verbatimTextOutput("filels")
+                ,textInput('caption', '输入想要读取的文件', "app.R")
+                ,actionButton("goreadfile", "Submit2")
+                ,verbatimTextOutput("goreadfiletext")
+                ),
+       tabPanel('运行环境',
+                uiOutput("runenvirclip"), 
+                verbatimTextOutput("runenvir")
+                ,actionButton("goButton5", "不要轻易点此按钮")
+                ,verbatimTextOutput("mmmxxx")
+                )
         )
 )
     
@@ -104,7 +110,7 @@ server <- function(input, output) {
     tryCatch(
       {
         file_bib = readLines(input$file3_bib$datapath,encoding = "UTF-8")
-        file_bib = c('\\n',file_bib,'\\n')# 对第一个参考文献添加换行,与最后一个参考文件添加换行
+        file_bib = c('\n',file_bib,'\n')# 对第一个参考文献添加换行,与最后一个参考文件添加换行
         writeLines(file_bib,'./MEMIO_default.bib')
         file_csl = readLines(input$file2_csl$datapath,encoding = "UTF-8")
         writeLines(file_csl,'./navigation_default.csl')
@@ -114,14 +120,19 @@ server <- function(input, output) {
         stop(safeError(e))
       }
     )
-    ### 0. 形式 rmd 的 yaml 部分
+    ##############################################
+    ### 0. 形式 rmd 的 yaml 部分##################
+    ######0.1 添加模板################
+    # s00 = "\\documentclass[12pt,a4paper,oneside]{article}\n\\usepackage{ctex}\n\\usepackage{lmodern}\n\\usepackage{lineno, hyperref}\n\\hypersetup{colorlinks=true, citecolor=blue, anchorcolor=blue}\n\\usepackage{amsmath}\n\\usepackage{amssymb}\n\\usepackage{amsthm}\n\n\\begin{document}\n$body$\n\\end{document}"
+    # writeLines(s00,'./template.tex')
+    # s0 = "---\ntitle: \"how to use Rmarkdown\"\nauthor: \"Juyuan\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    template: template.tex\n    latex_engine: xelatex\nlink-citations: yes \n"
+    ####################
+    ### 0.1 使用xelatex, 没有添加模板
     s0 = "---\ntitle: \"how to use Rmarkdown\"\nauthor: \"Juyuan\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    latex_engine: xelatex\nlink-citations: yes \n"
-    
-    
     s1 = "csl: navigation_default_orgin.csl\nbibliography: MEMIO_default_orgin.bib\n---\n"
     s1 = str_replace(s1,'MEMIO_default_orgin.bib','MEMIO_default.bib') %>%  str_replace(.,'navigation_default_orgin.csl','navigation_default.csl')
     file_rmd_sec_yaml = paste(s0,s1,sep = "") # 形成Rmd 的 yaml 部分
-    
+    ###############################################
     #### 1 , 开始读取tex文件, 准备形成 rmd 的后半部分
     document = readLines(input$file1_tex$datapath,encoding = "UTF-8")  %>% paste(collapse = ' ')
     command_order = str_extract_all(document,'(?<=\\\\cite[p]?\\{).*?(?=\\})')[[1]]
@@ -244,7 +255,8 @@ server <- function(input, output) {
     on.exit(progress$close())
     
     progress$set(message = "正在计算中,请耐心等待!!!", value = 0)
-    render("./file_finally_default.Rmd", output_format = "pdf_document") #render("file_finally.Rmd", output_format = "all")
+   # render("./file_finally_default.Rmd", output_format = "pdf_document") #render("file_finally.Rmd", output_format = "all")
+    rmarkdown::render("./file_finally_default.Rmd", output_format = latex_document())
     
     ## 5. 读取新的tex文件,并且提取tex 中具有参考文献样式的字段
     file_finally_default_tex = readLines("./file_finally_default.tex")
@@ -288,12 +300,10 @@ server <- function(input, output) {
     yangshi2_list = paste(file_finally_tex_cite41,collapse = '\n\n') # %>% writeLines(.,con = 'file_finally_tex_cite2.txt')
     yangshi2_list = paste0('\\section*{References}\n\\begin{thebibliography}{99}\n',yangshi2_list,'\n\n\\end{thebibliography}')
     yangshi_list = list(yangshi1_list,yangshi2_list, jinggao)  # 以 list 形式输出
-    ##### 删除目录
-    now_dir= list.files()
-    delete_file = list.files(path = ".", pattern = '(.*\\.Rmd$)|(.*\\.tex$)|(.*\\.bib$)|(.*\\.csl$)|(.*\\.md$)|(.*\\.docx$)(.*\\.pdf$)(.*\\.html$)')
     return(yangshi_list)
     })
-   
+   #######################################################
+  ######################### 清楚文件函数 ###############
   clear_file_now = eventReactive(input$goButton3,{
     now_dir= list.files()
     delete_file = list.files(path = ".", pattern = '(.*\\.Rmd$)|(.*\\.tex$)|(.*\\.bib$)|(.*\\.csl$)|(.*\\.md$)|(.*\\.docx$)(.*\\.pdf$)(.*\\.html$)')
@@ -305,20 +315,46 @@ server <- function(input, output) {
     if (file.exists("file_finally_default.pdf")){
       file.remove("file_finally_default.pdf")
     }
+    if(file.exists("template.tex")){
+      file.remove("template.tex")
+    }
   
     d_file = list.files()
-    exist_file = setdiff(d_file, c("app.R","packrat","rsconnect","shiny_cankaowenxian.Rproj"))
+    exist_file = setdiff(d_file, c("app.R","packrat","rsconnect","shiny_cankaowenxian.Rproj",'unicode-math.sty'))
     if(length(exist_file) == 0){
-      paste("是的,已经清空缓存")
+      return(paste("是的,已经清空缓存"))
     }else {
-      paste0("没有清空缓存,还有以下文件没有删除\n\n",paste(exist_file,collapse = '\n'))
+      return(paste0("没有清空缓存,还有以下文件没有删除\n\n",paste(exist_file,collapse = '\n')))
     }
   })
+  #######################################################
+  ######################### 列举当前文件函数 ###############
   list_file_now = eventReactive(input$goButton4,{
     now_dir= list.files()
     paste(now_dir,collapse = '\n')
   })
-   ## 输出文件
+  #######################################################
+  ######################### 显示运行环境函数 ###############
+  read_sessionInfo = reactive({
+    sink(file = 'aa.txt')
+    print(sessionInfo())
+    sink()
+    session_txt = readLines("aa.txt",encoding = "UTF-8") %>%  paste(.,collapse ='\n' )
+    file.remove('aa.txt')
+    return(session_txt)
+  })
+  read_file = eventReactive(input$goreadfile,{
+    temp_txt = readLines(input$caption,encoding = "UTF-8") %>%  paste(.,collapse ='\n' )
+    return(temp_txt)
+  })
+  ##  更新tex函数
+   update_sty = eventReactive(input$goButton5,{
+     mm = tlmgr_search('unicode-math.sty')  
+     tt = tlmgr_install('unicode-math') 
+     return(paste(mm,tt,collapse = '\n',sep = '\n'))
+   })
+  #######################################################
+  ############### 输出警告函数,----- 即 tex中有引用,但是bib数据库中不存在该参考文献  ###############
    output$b0 <- renderText({
     d1 = randomVals()[[2]]
     if(length(d1)>=1){
@@ -328,35 +364,41 @@ server <- function(input, output) {
       return('无')
     }
   })
-   output$b1 <- renderText({
+   
+   ##########################################
+   ##### 输出样式1################
+   output$style1 <- renderText({
      yangshi()[[1]]
    })
-   output$b2 <- renderText({
+   output$style1clip <- renderUI({
+     rclipButton("style1clip", "style1 Copy", yangshi()[[1]], icon("clipboard"))
+   })
+   ##########################################
+   ##### 输出样式2################
+   output$style2 <- renderText({
      yangshi()[[2]]
    })
-   output$clip1 <- renderUI({
-       rclipButton("clipbtn1", "style1 Copy", yangshi()[[1]], icon("clipboard"))
-   })
-   output$clip2 <- renderUI({
+   output$style2clip <- renderUI({
      rclipButton("clipbtn2", "style2 Copy", yangshi()[[2]], icon("clipboard"))
    })
-   output$b3 <- renderText({
+   
+   ##########################################
+   ##### 清楚文件################
+   output$clearvar <- renderText({
      clear_file_now()
    })
-   output$b4 <- renderText({
+   ##########################################
+   ##### 显示文件################
+   output$filels <- renderText({
      list_file_now()
    })
+   ##########################################
+   ##### 输出引用的bib和key################
    output$bib01yinyongclip <- renderUI({
      rclipButton("bib01yinyongclip", " bib cite Copy", out_yinyong()[[1]], icon("clipboard"))
    })
    output$bib01yinyong <- renderText({
      out_yinyong()[[1]]
-   })
-   output$bib02noyinyongclip <- renderUI({
-     rclipButton("bib02noyinyongclip", "bib no cite Copy", out_no_yinyong()[[1]], icon("clipboard"))
-   })
-   output$bib02noyinyong <- renderText({
-     out_no_yinyong()[[1]]
    })
    output$key01yinyongclip <- renderUI({
      rclipButton("key01yinyongclip", "key cite Copy", out_yinyong()[[2]], icon("clipboard"))
@@ -364,11 +406,38 @@ server <- function(input, output) {
    output$key01yinyong <- renderText({
      out_yinyong()[[2]]
    })
+   ############################################
+
+   ############################################
+   ###### 输出没有引用的bib和key##############
+   output$bib02noyinyongclip <- renderUI({
+     rclipButton("bib02noyinyongclip", "bib no cite Copy", out_no_yinyong()[[1]], icon("clipboard"))
+   })
+   output$bib02noyinyong <- renderText({
+     out_no_yinyong()[[1]]
+   })
    output$key02noyinyongclip <- renderUI({
      rclipButton("key02noyinyongclip", "key no cite Copy", out_no_yinyong()[[2]], icon("clipboard"))
    })
    output$key02noyinyong <- renderText({
      out_no_yinyong()[[2]]
+   })
+   ############################################
+   
+   ############################################
+   ###### 输出运行环境 ####################
+   output$runenvirclip <- renderUI({
+     rclipButton("runenvirclip", "environment Copy", read_sessionInfo(), icon("clipboard"))
+   })
+   output$runenvir <- renderPrint({
+     print(sessionInfo())
+   })
+   ############################################
+   output$goreadfiletext <- renderText({
+     read_file()
+   })
+   output$mmmxxx <-renderText({
+     update_sty()
    })
 }
 
