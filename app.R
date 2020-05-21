@@ -6,7 +6,7 @@ library(rmarkdown)
 library(purrr)
 library(dplyr)
 library(tinytex)
-
+#library(lubridate)
 #options(shiny.fullstacktrace = TRUE)
 options(shiny.sanitize.errors = FALSE)
 rm(list = ls())
@@ -25,7 +25,7 @@ for(i in delete_dir){
 # Define UI for application that draws a histogram
 ui <- fluidPage(
     titlePanel( title = h2("自用参考文献样式调整", align = "left"), windowTitle = '自用参考文献样式调整' ),
-    rclipboardSetup(),# 剪切板设置,必须在开头声明,后面才能用,这是一段js的调用
+    rclipboardSetup(), # 剪切板设置,必须在开头声明,后面才能用,这是一段js的调用
     tabsetPanel( 
         tabPanel("输入",
                  wellPanel(
@@ -38,9 +38,10 @@ ui <- fluidPage(
         tabPanel("使用说明与警告显示",
                  helpText("1, 上传文件时采用 UTF-8 编码.", br(), 
                           "2, 上传文件到生成参考文献样式,需要花一定时间,还请耐心等待.",br(), 
-                          "3, 最终输出的参考文献结果还需要仔细检查,符合期刊要求."),
-                 HTML("<p><font color='red'>\n警告显示如下:\n</font></p>"),
-                 verbatimTextOutput("b0")),
+                          "3, 最终输出的参考文献结果还需要仔细检查,符合期刊要求.")
+                 #,HTML("<p><font color='red'>\n警告显示如下:\n</font></p>")  # 方法一:  直接使用HTML标签
+                 ,p("警告显示如下:", style="font-weight:bold;color:red;")
+                 ,verbatimTextOutput("b0")),
         tabPanel("style 1", 
                  helpText("注意:最终的结果可能还需要细调"),
                  uiOutput("style1clip"), 
@@ -83,22 +84,45 @@ ui <- fluidPage(
 
        ),
        
-       tabPanel("清空缓存", 
-                p("是否要清空缓存"),
-                actionButton("goButton3", "Submit"),
-                verbatimTextOutput("clearvar"),
-                p("是否显示当前目录的所有文件及目录"),
-                actionButton("goButton4", "Submit"),
-                verbatimTextOutput("filels")
-                ,textInput('caption', '输入想要读取的文件', "app.R")
-                ,actionButton("goreadfile", "Submit2")
-                ,verbatimTextOutput("goreadfiletext")
+       tabPanel("运行环境与缓存", 
+               fluidRow(
+                 column(4,wellPanel(
+                   radioButtons('clear_and_list','清空缓存or列举文件',c("清空缓存",'列举文件'),selected = "清空缓存",width ='100%')
+                   ,actionButton('click','提交')
+                )),
+                 column(8,wellPanel(
+                   verbatimTextOutput("clear_and_list_text")
+                 ))
+               )
+               ,uiOutput("runenvirclip"), 
+               verbatimTextOutput("runenvir")
+       ),
+            
+       tabPanel('shell',
+                fluidRow(
+                  column(6,wellPanel(
+                    textAreaInput('caption', '想要保存的内容', "你好!!",width = "100%",height = "400px"),
+                    textInput("filename","保存的文件名", 'testone.txt')
+                    ,actionButton("gowritefile", "Submit2")
+                  )),
+                  column(6,wellPanel(
+                    verbatimTextOutput("gowritefiletext")
+                  ))
                 ),
-       tabPanel('运行环境',
-                uiOutput("runenvirclip"), 
-                verbatimTextOutput("runenvir")
-                ,actionButton("goButton5", "不要轻易点此按钮")
-                ,verbatimTextOutput("mmmxxx")
+                fluidRow(
+                  column(6,wellPanel(
+                    textInput("filename1","想要删除的文件名", 'testone.txt')
+                    ,actionButton("godeletefile","提交")
+                  )),
+                  column(6,wellPanel(
+                    verbatimTextOutput("godelfiletext")
+                  ))
+                ),
+                fluidRow(column(12, wellPanel(
+                  textInput('shell', '显示shell命令', "ls")
+                  ,actionButton("goreadshell", "执行shell")
+                  ,verbatimTextOutput("shelltext")
+                )))
                 )
         )
 )
@@ -127,8 +151,9 @@ server <- function(input, output) {
     # writeLines(s00,'./template.tex')
     # s0 = "---\ntitle: \"how to use Rmarkdown\"\nauthor: \"Juyuan\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    template: template.tex\n    latex_engine: xelatex\nlink-citations: yes \n"
     ####################
-    ### 0.1 使用xelatex, 没有添加模板
-    s0 = "---\ntitle: \"how to use Rmarkdown\"\nauthor: \"Juyuan\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    latex_engine: xelatex\nlink-citations: yes \n"
+    ### 0.1 使用xelatex, 没有添加模板, 在原有的基础上添加ctex宏包
+    # s0 = "---\ntitle: \"how to use Rmarkdown\"\nauthor: \"Juyuan\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    latex_engine: xelatex\nlink-citations: yes \n"
+    s0 = "---\ntitle: \"how to use cite\"\nauthor: \"zsc\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    latex_engine: xelatex\n    extra_dependencies: [\"ctex\",\"caption\"]\nlink-citations: yes \n"
     s1 = "csl: navigation_default_orgin.csl\nbibliography: MEMIO_default_orgin.bib\n---\n"
     s1 = str_replace(s1,'MEMIO_default_orgin.bib','MEMIO_default.bib') %>%  str_replace(.,'navigation_default_orgin.csl','navigation_default.csl')
     file_rmd_sec_yaml = paste(s0,s1,sep = "") # 形成Rmd 的 yaml 部分
@@ -257,6 +282,8 @@ server <- function(input, output) {
     progress$set(message = "正在计算中,请耐心等待!!!", value = 0)
    # render("./file_finally_default.Rmd", output_format = "pdf_document") #render("file_finally.Rmd", output_format = "all")
     rmarkdown::render("./file_finally_default.Rmd", output_format = latex_document())
+   # rmarkdown::render("./file_finally_default.Rmd", output_format = pdf_document(latex_engine = "xelatex",extra_dependencies = list(ctex = NULL)) )
+    
     
     ## 5. 读取新的tex文件,并且提取tex 中具有参考文献样式的字段
     file_finally_default_tex = readLines("./file_finally_default.tex")
@@ -302,37 +329,55 @@ server <- function(input, output) {
     yangshi_list = list(yangshi1_list,yangshi2_list, jinggao)  # 以 list 形式输出
     return(yangshi_list)
     })
+  
    #######################################################
   ######################### 清楚文件函数 ###############
-  clear_file_now = eventReactive(input$goButton3,{
-    now_dir= list.files()
-    delete_file = list.files(path = ".", pattern = '(.*\\.Rmd$)|(.*\\.tex$)|(.*\\.bib$)|(.*\\.csl$)|(.*\\.md$)|(.*\\.docx$)(.*\\.pdf$)(.*\\.html$)')
-    for(i in delete_file){
-      if(!file_test("-d", i)){#不是目录则删除
-        file.remove(i)
+  clear_file <- eventReactive(input$click, {
+      now_dir <- list.files()
+      delete_file <- list.files(path = ".", pattern = "(.*\\.Rmd$)|(.*\\.tex$)|(.*\\.bib$)|(.*\\.csl$)|(.*\\.md$)|(.*\\.docx$)(.*\\.pdf$)(.*\\.html$)")
+      for (i in delete_file) {
+        if (!file_test("-d", i)) { # 不是目录则删除
+          file.remove(i)
+        }
       }
-    }
-    if (file.exists("file_finally_default.pdf")){
-      file.remove("file_finally_default.pdf")
-    }
-    if(file.exists("template.tex")){
-      file.remove("template.tex")
-    }
-  
-    d_file = list.files()
-    exist_file = setdiff(d_file, c("app.R","packrat","rsconnect","shiny_cankaowenxian.Rproj",'unicode-math.sty'))
-    if(length(exist_file) == 0){
-      return(paste("是的,已经清空缓存"))
-    }else {
-      return(paste0("没有清空缓存,还有以下文件没有删除\n\n",paste(exist_file,collapse = '\n')))
-    }
-  })
+      if (file.exists("file_finally_default.pdf")) {
+        file.remove("file_finally_default.pdf")
+      }
+      if (file.exists("template.tex")) {
+        file.remove("template.tex")
+      }
+    
+      d_file <- list.files()
+      exist_file <- setdiff(d_file, c("app.R", "packrat", "rsconnect", "shiny_cankaowenxian.Rproj", "unicode-math.sty"))
+      if (length(exist_file) == 0) {
+        temp <- paste("是的,已经清空缓存")
+        temp1 <- paste(Sys.time(), "\n", temp,collapse = "",sep = "")
+        return(temp1)
+      } else {
+        temp <- paste0("没有清空缓存,还有以下文件没有删除\n\n", paste(exist_file, collapse = "\n",sep = ""))
+        temp1 <- paste(Sys.time(), "\n",  temp,collapse = "",sep = "")
+        return(temp1)
+      }
+})
   #######################################################
   ######################### 列举当前文件函数 ###############
-  list_file_now = eventReactive(input$goButton4,{
-    now_dir= list.files()
-    paste(now_dir,collapse = '\n')
+  list_file = eventReactive(input$click,{
+    now_dir=  list.files()
+    temp = paste(now_dir,collapse = '\n',sep = "")
+    temp1 = paste(Sys.time(),"\n\n",temp,sep = "")
+    return(temp1)
   })
+  output$clear_and_list_text <- renderText({
+    if(isolate(input$clear_and_list) == '清空缓存'){
+      clear_file()
+      
+    }else if(isolate(input$clear_and_list) == '列举文件'){
+      list_file()
+    }else{
+      print('ssss')
+    }
+  })
+
   #######################################################
   ######################### 显示运行环境函数 ###############
   read_sessionInfo = reactive({
@@ -343,15 +388,27 @@ server <- function(input, output) {
     file.remove('aa.txt')
     return(session_txt)
   })
-  read_file = eventReactive(input$goreadfile,{
-    temp_txt = readLines(input$caption,encoding = "UTF-8") %>%  paste(.,collapse ='\n' )
-    return(temp_txt)
+  
+  write_file = eventReactive(input$gowritefile,{
+     writeLines(input$caption, con =  input$filename) 
+     temp = readLines(input$filename,encoding = "UTF-8") %>%  paste(.,collapse ='\n' )
+    return(temp)
+   })
+  delete_file = eventReactive(input$godeletefile,{
+      if(file.exists(input$filename1)){
+        file.remove(input$filename1)
+        return(paste0("删除了 ", input$filename1, " 文件"))
+      }else{
+        return(paste0("没有 ", input$filename1, " 文件"))
+      }
   })
   ##  更新tex函数
-   update_sty = eventReactive(input$goButton5,{
-     mm = tlmgr_search('unicode-math.sty')  
-     tt = tlmgr_install('unicode-math') 
-     return(paste(mm,tt,collapse = '\n',sep = '\n'))
+  update_shell = eventReactive(input$goreadshell,{
+    if(file.exists("file_finally_default.log")){
+      tinytex::parse_install("file_finally_default.log")
+    }
+     temp = system(input$shell, intern = TRUE) %>%  paste(.,collapse ='\n' )
+     return( temp )
    })
   #######################################################
   ############### 输出警告函数,----- 即 tex中有引用,但是bib数据库中不存在该参考文献  ###############
@@ -382,16 +439,8 @@ server <- function(input, output) {
      rclipButton("clipbtn2", "style2 Copy", yangshi()[[2]], icon("clipboard"))
    })
    
-   ##########################################
-   ##### 清楚文件################
-   output$clearvar <- renderText({
-     clear_file_now()
-   })
-   ##########################################
-   ##### 显示文件################
-   output$filels <- renderText({
-     list_file_now()
-   })
+
+
    ##########################################
    ##### 输出引用的bib和key################
    output$bib01yinyongclip <- renderUI({
@@ -433,11 +482,14 @@ server <- function(input, output) {
      print(sessionInfo())
    })
    ############################################
-   output$goreadfiletext <- renderText({
-     read_file()
+   output$gowritefiletext <- renderText({
+      write_file()
+    })
+   output$godelfiletext <- renderText({
+     delete_file()
    })
-   output$mmmxxx <-renderText({
-     update_sty()
+   output$shelltext <-renderText({
+     update_shell()
    })
 }
 
