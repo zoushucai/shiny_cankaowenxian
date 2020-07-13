@@ -132,8 +132,11 @@ server <- function(input, output) {
     
     ###############################################
     #### 1 , 开始读取tex文件, 准备形成 rmd 的后半部分
-    document = readLines(input$file1_tex$datapath, encoding = "UTF-8")  %>% paste(collapse = ' ')
-    tex_key = str_extract_all(document,'(?<=\\\\cite[p]?\\{).*?(?=\\})')[[1]]
+    document = readLines(input$file1_tex$datapath, encoding = "UTF-8")
+    document = str_replace_all(document,'^[:blank:]*?%.*','')# 删除以% 开头的所有内容
+    document = str_replace_all(document,'([^\\\\])(%.*)','\\1') # 删除前面不是以\\开始的% 以后的所有内容
+    document = document[which(document != '')] %>% paste(collapse = ' ')
+    tex_key = str_extract_all(document,'(?<=\\\\cite[pt]?\\{).*?(?=\\})')[[1]]
     # 如果存在逗号分隔的需要考虑 并 删除两边的空格,后 删除重复标签
     tex_key = unlist(str_split(tex_key,','))  %>% str_trim(., side = "both") %>% unique()
     
@@ -151,7 +154,7 @@ server <- function(input, output) {
     }
     
     ### 2.0 对key和参考文献的类型进行拼接对应. 当bib中含有tex所有参考文献时
-    if( all(tex_key %in% bib_df$key) ){
+    if( all(tex_key %in% c(bib_df$key,""))  ){
       ##### 2.1 找出bib中没有被tex引用的参考文献
       set_bib_diff = setdiff(bib_df$key,tex_key)# bib中存在,但tex没有引用 
       ## 3. 生成 rmd 文件的参考文献样式
@@ -172,6 +175,7 @@ server <- function(input, output) {
       ##### 2.3 对比 tex 文件提取的 command 命令, tex 中有,但bib没有的数据 
       set_tex_diff = setdiff(tex_key, bib_df$key)
       mm = paste(set_tex_diff, collapse =  "\n") # tex中引用,但bib中不存在,则报错
+      print(mm)
       stop(paste0("\n",mm,'\n出错,这些参考文献在tex文件中引用了,但是在数据库中不存在该文献!!') )
     }
     
@@ -209,7 +213,7 @@ server <- function(input, output) {
     tex_sub_new = str_replace(tex_sub_new,"(^\\{\\[\\}[0-9]{1,2}\\{\\]\\})( )",'') %>% str_trim(.,side = "both") # 特殊情况处理
     ##### 6.3 把环境 \\begin{cslreferences} 改为\begin{thebibliography}环境
     tex_sub_new = str_replace_all(tex_sub_new,'(?<=\\{)cslreferences(?=\\})',"thebibliography")
-    tex_sub_new = str_replace(tex_sub_new, '\\\\begin\\{thebibliography\\}','\\section*{References}\n\\begin{thebibliography}{99}\n\n')
+    tex_sub_new = str_replace(tex_sub_new, '\\\\begin\\{thebibliography\\}','\\\\section*{References}\n\\\\begin{thebibliography}{99}\n\n')
     #### 样式1 ----  每一个参考文献在不同行
     style_1 = paste(tex_sub_new,collapse = "\n") #
     
