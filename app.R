@@ -6,10 +6,13 @@ library(rmarkdown)
 library(purrr)
 library(dplyr)
 library(tinytex)
+library(DT)
+library(journalabbr)
 #library(lubridate)
 #options(shiny.fullstacktrace = TRUE)
 options(shiny.sanitize.errors = FALSE)
 rm(list = ls())
+
 clear_file = function(mypattern = '(.*\\.R$)|(.*\\.Rproj$)' ){
   tryCatch(
     {
@@ -31,42 +34,196 @@ clear_file = function(mypattern = '(.*\\.R$)|(.*\\.Rproj$)' ){
   )
 }
 
+is_empty = rlang::is_empty
+
+style_fun = function(texfile){
+  tex =  readLines(texfile, encoding = "UTF-8")
+  style_0 = paste0(tex ,collapse = "\n")     # 直接返回rmd生成的tex文件样式
+  
+  #clear_file()
+  ## 提取页面的显示信息--有可能是数字,有可能是作者,有可能是作者-年
+  from1 = grep('\\\\begin\\{document\\}',tex)
+  from2 = grep('\\\\maketitle',tex)
+  if(is_empty(from1) && is_empty(from2)){
+    stop('没找到开始的地方')
+  }else if(!is_empty(from1) && is_empty(from2)){
+    ind_from = from1
+  }else if(is_empty(from1) && !is_empty(from2)){
+    ind_from = from2
+  }else if (from1 <= from2){
+    ind_from = from2
+  }else{
+    stop('索引值出错,没找到开始的地方')
+  }
+  to1 = grep('\\\\hypertarget\\{refs\\}',tex)
+  to2 = grep('\\\\begin\\{cslreferences\\}',tex)
+  if(is_empty(to1) && is_empty(to2)){
+    stop('没找到结束的地方')
+  }else if(!is_empty(to1) && is_empty(to2)){
+    ind_to = to1
+  }else if(is_empty(to1) && !is_empty(to2)){
+    ind_to = to2
+  }else if (to1 <= to2){
+    ind_to = to1
+  }else{
+    stop('索引值出错,没找到结束的地方')
+  }
+  
+  tex_show = tex[(ind_from + 1):(ind_to - 1)]# 提权显示页面
+  for (i in seq_len(100)) {
+    value = which(tex_show[1] =="")
+    if(!is_empty(value) && value ==1){
+      tex_show = tex_show[2:length(tex_show)]
+    }else{
+      break
+    }
+  }
+  for (i in seq_len(100)) {
+    max_len = length(tex_show)
+    value = which(tex_show[max_len] =="")
+    if(!is_empty(value) && value ==1){
+      tex_show = tex_show[1:(max_len-1)]
+    }else{
+      break
+    }
+  }
+  tex_show[tex_show == ""] = '\n@@\n\n\n'
+  tex_show = paste(tex_show,collapse = ' ',sep = "")
+  tex_show = unlist(str_split(tex_show,'\n@@\n\n\n'))
+  tex_show = str_trim(tex_show,side = "both")
+  
+  key_show = stringr::str_extract_all(tex_show,'(?<=\\\\protect\\\\hyperlink\\{ref-)(.*?)(?=\\})',simplify=TRUE)
+  word_show = stringr::str_replace_all(tex_show,'\\\\protect\\\\hyperlink\\{ref-.*?\\}','')
+  
+  # 处理多余的大括号-- 处理大括号
+  word_show = stringr::str_replace_all(word_show,'([^\\\\])(\\{)([^ ]*?)(\\})','\\1\\3')
+  # word 部分进行删除, 删除数字标签 {[}三个数字以内{]}
+  word_show = str_replace_all(word_show, '^\\{\\[\\}[0-9]{0,3}\\{\\]\\}$','')
+  
+  show_df = data.frame('key' = key_show,'word'=word_show)
+  # 参考文献部分
+  ind_end  = grep("\\\\end\\{cslreferences\\}",tex)
+  to2 = grep('\\\\begin\\{cslreferences\\}',tex)
+  if(is_empty(to2)){
+    stop("参考文献没有开始标记")
+  }
+  if(is_empty(ind_end)){
+    stop('参考文献没有结束标记')
+  }
+  
+  tex_sub = tex[(to2 + 1):(ind_end - 1)] # 提取tex 的一个子页面
+  ## 6. 处理tex_sub的参考文献字段,使其变为bibitem样式
+  ##### 6.1 把tex_sub中的 '\leavevmode\hypertarget{ref-****}{}%'  字段变成'\bibitem{***}' 字段
+  key_index = grep('(?<=\\\\leavevmode\\\\hypertarget\\{ref-)(.*?)(?=\\})',tex_sub,perl = TRUE)
+  tex_sub_new = str_replace(tex_sub,'(^\\\\leavevmode\\\\hypertarget\\{ref-)(.*?)(\\})(\\{\\}%$)',replacement= "\\2")
+  ##### 6.2 把tex_sub_new 中的key标签下一行的 {[}**{]} 给替换为空
+  tex_sub_new = str_replace_all(tex_sub_new,"(^\\{\\[\\}[0-9]{0,3}\\{\\]\\})( ){0,}",'') %>% str_trim(.,side = "both") # 特殊情况处理
+  #### 6.3 把标签key用上面显示的文本进行替换, 没找到则用空进行替换
+  for (i in key_index) {
+    value_temp = show_df[show_df[['key']] == tex_sub_new[i], 2]
+    if (!is_empty(value_temp) ) {
+      tex_sub_new[i] = paste0('\\bibitem{',tex_sub_new[i],'}{',value_temp,'}')
+    }else{
+      tex_sub_new[i] = paste0('\\bibitem{',tex_sub_new[i],'}{}')
+    }
+  }
+  ### 样式0 ---- 返回rmd处理的最原始的引用样式
+  # style_0 = paste0(tex[to2:ind_end] ,collapse = "\n")
+  
+  #### 样式1 ----  每一个参考文献在不同行
+  style_1 = c('\\section*{References}', '\\begin{thebibliography}{99}',tex_sub_new,'\\end{thebibliography}')
+  style_1 = paste(style_1,collapse = "\n") #
+  
+  #### 样式2 ---- 每一个参考文献在同一行
+  tex_sub_new[tex_sub_new == ""] = "\n\n"
+  style_2 = c('\\section*{References}\n\n', '\\begin{thebibliography}{99}\n\n',tex_sub_new,'\n\n\\end{thebibliography}')
+  style_2 = paste(style_2, collapse = " ")
+  style_2 = str_replace_all(style_2, pattern = " {2,}",replacement = " ") # 处理多余的空格 或 [:blank:]
+  style_2 =  str_replace_all(style_2, pattern = "\n\n ",replacement = "\n\n") # 处理换行后的空格
+  return(list(style_1,style_2,style_0))
+}
+
+extract_key = function(texfile){
+  #### 1.开始读取原始的tex文件,并提取key---- 准备形成 rmd 的后半部分
+  ###############################################
+  document <- readLines(texfile,encoding = "UTF-8")
+  document = str_replace_all(document,'^[[:blank:]]*?%.*','')# 删除以% 开头的所有内容
+  document = str_replace_all(document,'([^\\\\])(%.*)','\\1') # 删除前面不是以\\开始的% 以后的所有内容
+  document = document[which(document != '')] %>% paste(collapse = ' ')
+  # 提取key
+  tex_key = unlist(str_extract_all(document,'(?<=\\\\cite[pt]?\\{).*?(?=\\})'))
+  # 如果存在逗号分隔的需要考虑 并 删除两边的空格,后 删除重复标签
+  tex_key = unlist(str_split(tex_key,','))  %>% str_trim(., side = "both") %>% unique()
+  return(tex_key)
+}
+
 clear_file()
-
-
-
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   titlePanel( title = h2("自用参考文献样式调整", align = "left"), windowTitle = '自用参考文献样式调整' ),
   rclipboardSetup(), # 剪切板设置,必须在开头声明,后面才能用,这是一段js的调用
-  tabsetPanel( 
-    tabPanel("输入",
+  tabsetPanel(
+    tabPanel("Input",
              wellPanel(
                fileInput("file1_tex", "Choose tex File(文件编码:UTF-8)", accept = c("text/csv","text/comma-separated-values,text/plain",'.tex')),
                fileInput("file2_csl", "Choose csl File(文件编码:UTF-8)", accept = c("text/csv","text/comma-separated-values,text/plain",'.csl')),
                fileInput("file3_bib", "Choose bib File(文件编码:UTF-8)", accept = c("text/csv","text/comma-separated-values,text/plain",'.bbl')),
+               
+               fluidRow(
+                 column(4,
+                        selectInput("bibabbr", "是否只对期刊文献进行缩写:",
+                                    choices = c(
+                                      'yes' = TRUE,
+                                      'no' = FALSE),
+                                    selected = TRUE)
+                 ),
+                 column(4,
+                        selectInput('bibformat', '是否美化bib文件(否,则多个作者处理无效)',
+                                    choices = c('no' = FALSE,
+                                                'yes' = TRUE),
+                                    selected = FALSE)
+                 ),
+                 column(4,
+                        selectInput("connectauthor", "多个作者处理",
+                                    choices = c('nothing' = "nothing",
+                                                'and' = 'and',
+                                                '\\\\&' = '\\\\&',
+                                                '&' = '&' ),
+                                    selected = "nothing")
+                 )
+               ),
+               
+               
                actionButton("goButton", "Submit")
              )),
-    tabPanel("使用说明与警告显示",
-             helpText("1, 上传文件时采用 UTF-8 编码.", br(), 
-                      "2, 上传文件到生成参考文献样式,需要花一定时间,还请耐心等待.",br(), 
+    tabPanel("Warning",
+             helpText("1, 上传文件时采用 UTF-8 编码.", br(),
+                      "2, 上传文件到生成参考文献样式,需要花一定时间,还请耐心等待.",br(),
                       "3, 最终输出的参考文献结果还需要仔细检查,符合期刊要求.")
              #,HTML("<p><font color='red'>\n警告显示如下:\n</font></p>")  # 方法一:  直接使用HTML标签
              ,p("警告显示如下:", style="font-weight:bold;color:red;")
              ,verbatimTextOutput("out_warning")),
-    tabPanel("style 1", 
+    tabPanel("Items Info",
              helpText("注意:最终的结果可能还需要细调"),
-             uiOutput("out_style1_clip"), 
+             dataTableOutput(outputId="jouranl_abbr")
+    ),
+    tabPanel("Abbr source",
+             helpText("注意:最终的结果可能还需要细调"),
+             dataTableOutput(outputId="abbrsource")
+    ),
+    tabPanel("Style 1",
+             helpText("注意:最终的结果可能还需要细调"),
+             uiOutput("out_style1_clip"),
              verbatimTextOutput("out_style1")),
-    tabPanel("style 2", 
+    tabPanel("Style 2",
              helpText("注意:最终的结果可能还需要细调"),
-             uiOutput("out_style2_clip"), 
+             uiOutput("out_style2_clip"),
              verbatimTextOutput("out_style2")),
-    tabPanel("style 0", 
+    tabPanel("Style 0",
              helpText("注意:最终的结果可能还需要细调"),
-             uiOutput("out_style0_clip"), 
+             uiOutput("out_style0_clip"),
              verbatimTextOutput("out_style0")),
-    tabPanel("引用bib和key", 
+    tabPanel("Cite bib",
              fluidRow(
                column(12,
                       p("输出引用的bib项和key值")
@@ -76,29 +233,29 @@ ui <- fluidPage(
                           c("按tex文中引用顺序", "按key字母升序" , "按key字母降序","按文献类型字母升序排序","按文献类型字母降序排序","按文献类型排序")),
              fluidRow(
                column(9, p('引用bib'), wellPanel(
-                 uiOutput("bib01yinyongclip"), 
-                 verbatimTextOutput("bib01yinyong"), 
+                 uiOutput("bib01yinyongclip"),
+                 verbatimTextOutput("bib01yinyong"),
                )),
                column(3, p('引用key'), wellPanel(
-                 uiOutput("key01yinyongclip"), 
+                 uiOutput("key01yinyongclip"),
                  verbatimTextOutput("key01yinyong")
                ))
              )
     ),
-    tabPanel("未引用bib和key", 
+    tabPanel("Nocite bib",
              helpText("输出未引用的bib项和key值"),
              fluidRow(
                column(9, p('未引用bib'), wellPanel(
-                 uiOutput("bib02noyinyongclip"), 
+                 uiOutput("bib02noyinyongclip"),
                  verbatimTextOutput("bib02noyinyong")
                )),
                column(3, p('未引用key'), wellPanel(
-                 uiOutput("key02noyinyongclip"), 
+                 uiOutput("key02noyinyongclip"),
                  verbatimTextOutput("key02noyinyong")
                ))
              )
     ),
-    tabPanel("运行环境与目录", 
+    tabPanel("SessionInfo",
              verbatimTextOutput("out_runenvir")
     )
     
@@ -113,15 +270,40 @@ server <- function(input, output) {
   ###0. 处理 bib 文件, csl, tex 文件
   randomVals <- eventReactive(input$goButton, {
     clear_file()
+    
     tryCatch(
       {
-        file_csl = readLines(input$file2_csl$datapath,encoding = "UTF-8")
+        texpath = input$file1_tex$datapath
+        clspath = input$file2_csl$datapath
+        bibpath = input$file3_bib$datapath
+        #
+        # texpath = '/Users/zsc/Desktop/rmdtest/shinytest/FlexilityDTFSTwoC.tex'
+        # texpath = '/Users/zsc/Desktop/rmdtest/shinytest/document2.tex'
+        # clspath = '/Users/zsc/Desktop/rmdtest/shinytest/ieee-transactions-on-cybernetics.csl'
+        # bibpath = "/Users/zsc/Desktop/rmdtest/shinytest/real3.bib"
+        
+        file_csl = readLines(clspath,encoding = "UTF-8")
         writeLines(file_csl,'./navigation_default.csl')
         
         
-        file_bib = readLines(input$file3_bib$datapath,encoding = "UTF-8")
+        file_bib = readLines(bibpath,encoding = "UTF-8")
         file_bib = c('\n',file_bib,'\n')# 对第一个参考文献添加换行,与最后一个参考文件添加换行
         writeLines(file_bib,'./MEMIO_default.bib')
+        abbrtable = NULL
+        if (input$bibabbr == "TRUE"){
+          #file.copy('MEMIO_default.bib','MEMIO_defaultcopy.bib')
+          abbrtable =  journalabbr::abbr2bib(file = "MEMIO_default.bib",
+                                             outfile = 'MEMIO_default.bib')
+          
+        }
+        if (input$bibformat == "TRUE"){
+          templogic2 = eval(parse(text = input$bibformat))
+          temptib = journalabbr::read_bib2tib(file = 'MEMIO_default.bib')
+          journalabbr::write_tib2bib(temptib,file = 'MEMIO_default.bib',
+                                     append = FALSE,
+                                     isformat = templogic2,
+                                     connect_author = input$connectauthor )
+        }
       },
       error = function(e) {
         # return a safeError if a parsing error occurs
@@ -131,59 +313,30 @@ server <- function(input, output) {
     
     
     ###############################################
-    #### 1 , 开始读取tex文件, 准备形成 rmd 的后半部分
-    document = readLines(input$file1_tex$datapath, encoding = "UTF-8")
-    document = str_replace_all(document,'^[:blank:]*?%.*','')# 删除以% 开头的所有内容
-    document = str_replace_all(document,'([^\\\\])(%.*)','\\1') # 删除前面不是以\\开始的% 以后的所有内容
-    document = document[which(document != '')] %>% paste(collapse = ' ')
-    tex_key = str_extract_all(document,'(?<=\\\\cite[pt]?\\{).*?(?=\\})')[[1]]
-    # 如果存在逗号分隔的需要考虑 并 删除两边的空格,后 删除重复标签
-    tex_key = unlist(str_split(tex_key,','))  %>% str_trim(., side = "both") %>% unique()
-    
+    #### 1 , 开始读取原始的tex文件,并提取key---- 准备形成 rmd 的后半部分
+    tex_key = extract_key(texfile = texpath )
     ################################################
-    ###### 2. 提取 bib文件,把key和key所对应的类型 组合成数据框
-    ## 读取一个file_bib文件,解析出 key值和 type 数据框,
-    file_bib = readLines("MEMIO_default.bib",encoding = "UTF-8") 
-    file_bib_type_and_key = str_extract(file_bib,'(^[ ]{0,}?@.*\\{)(.*?,)') %>% na.omit() %>% as.vector() %>%str_trim(., side = "both") %>%  unique()# 提取command命令,这里包含文献的类型和keyword
-    file_bib_command = str_extract(file_bib_type_and_key,'(?<=\\{).*?(?=,)') %>% str_trim(., side = "both") # key键命令
-    file_bib_type = str_extract(file_bib_type_and_key,'(?<=@).*?(?=\\{)') %>% str_trim(., side = "both") #key键对应的参考文献类型
-    if(length(file_bib_type) == length(file_bib_command)){
-      bib_df = data.frame('type' = file_bib_type, 'key' = file_bib_command)
-    }else{
-      stop("提取的key键与key键对应的参考文献类型长度不一致")
-    }
+    ###### 2. 提取 bib文件,把key和type组合成数据框
+    tib = journalabbr::read_bib2tib(file = 'MEMIO_default.bib')
+    tex_key_df = tibble::tibble('key' = tex_key, 'name' = 1:length(tex_key))
+    df =  dplyr::full_join(tex_key_df,tib, by =c("key"= "keybib"),suffix = c("_tex","_bib"))
     
-    ### 2.0 对key和参考文献的类型进行拼接对应. 当bib中含有tex所有参考文献时
-    if( all(tex_key %in% c(bib_df$key,""))  ){
-      ##### 2.1 找出bib中没有被tex引用的参考文献
-      set_bib_diff = setdiff(bib_df$key,tex_key)# bib中存在,但tex没有引用 
-      ## 3. 生成 rmd 文件的参考文献样式
+    tex_diff = !is.na(df$key)  & is.na(df$sitenum) # tex 有 , 而bib没有
+    if(sum(tex_diff) >=1){
+      s = paste0(df$key[tex_diff],collapse = "\n")
+      stop(paste0("出错,以下参考文献在tex文件中引用了,但是在数据库中不存在该文献!!\n", s,'\n请检查key后重新运行') )
+    }else{
+      
       rmd_yaml = "---\ntitle: \"how to use cite\"\nauthor: \"zsc\"\ndate: \"`r Sys.Date()`\"\noutput:\n  pdf_document: \n    keep_tex: true\n    latex_engine: xelatex\n    extra_dependencies: [\"ctex\",\"caption\"]\nlink-citations: yes \ncsl: navigation_default.csl\nbibliography: MEMIO_default.bib\n---\n"
       rmd_key = paste0('\n[@',tex_key,']\n') %>%  paste(.,collapse = "")
-      rmd_finally = rmd_key %>%  paste0(rmd_yaml, . )
-      
-      writeLines(rmd_finally,"rmd_finally.Rmd")
-      
-      file_bib = readLines("MEMIO_default.bib")
-      file_bib_paste = paste0(file_bib,collapse = "\n")
-      return(list(tex_key, bib_df,set_bib_diff,file_bib_paste)) # 对参考文献bib进行处理.方便返回list
-      # tex_key 为 key值在tex 中出现的顺序
-      # bib_df 为 bib数据库中key值与类型的对应 
-      # set_bib_diff 为bib 中有,但tex没有现的数据
-      # file_bib_paste 为bib数据库--只不过合并了
-    }else{
-      ##### 2.3 对比 tex 文件提取的 command 命令, tex 中有,但bib没有的数据 
-      set_tex_diff = setdiff(tex_key, bib_df$key)
-      mm = paste(set_tex_diff, collapse =  "\n") # tex中引用,但bib中不存在,则报错
-      print(mm)
-      stop(paste0("\n",mm,'\n出错,这些参考文献在tex文件中引用了,但是在数据库中不存在该文献!!') )
+      rmd_key %>%  paste0(rmd_yaml, . ) %>%  writeLines(.,"rmd_finally.Rmd")
+      return(list(df,abbrtable))
     }
-    
   })
   
   
   tex_cite_style = reactive({
-    tempvalue = randomVals()
+    df = randomVals()[[1]]
     ## 读取新的tex文件,并且提取tex 中具有参考文献样式的字段
     # 并通过pandoc 把Rmd文件转变为latex文件
     progress <- shiny::Progress$new()
@@ -191,41 +344,9 @@ server <- function(input, output) {
     
     progress$set(message = "正在计算中,请耐心等待!!!", value = 0)
     rmarkdown::render("rmd_finally.Rmd", output_format = latex_document())
-    tex =  readLines("rmd_finally.tex", encoding = "UTF-8")
+    value = style_fun(texfile = 'rmd_finally.tex')
     clear_file()
-    
-    begin_weizhi = which(str_extract(tex,"\\\\hypertarget" ) == '\\hypertarget')[1] + 1
-    end_weizhi = length(tex)
-    tex_sub = tex[begin_weizhi:end_weizhi] # 提取tex 的一个子页面
-    end_weizhi = length(tex_sub)
-    
-    if(str_detect(tex_sub[end_weizhi],'document')){
-      # 检查最后一行是否包含字符串 'document', 如果包括,则删除该行
-      tex_sub = tex_sub[1:(length(tex_sub) - 1)]
-    }
-    style_0 = paste0(tex_sub,collapse = "\n")     # 传递一个子tex页面,返回处理好的引用样式
-    
-    
-    ## 6. 处理tex_sub的参考文献字段,使其变为bibitem样式
-    ##### 6.1 把tex_sub中的 '\leavevmode\hypertarget{ref-****}{}%'  字段变成'\bibitem{***}' 字段
-    tex_sub_new = str_replace(tex_sub,'(^\\\\leavevmode\\\\hypertarget\\{ref-)(.*?)(\\})(\\{\\}%$)',replacement= "\\\\bibitem{\\2\\3")
-    ##### 6.2 把tex_sub_new 中的 {[}**{]} 给替换为空
-    tex_sub_new = str_replace(tex_sub_new,"(^\\{\\[\\}[0-9]{1,2}\\{\\]\\})( )",'') %>% str_trim(.,side = "both") # 特殊情况处理
-    ##### 6.3 把环境 \\begin{cslreferences} 改为\begin{thebibliography}环境
-    tex_sub_new = str_replace_all(tex_sub_new,'(?<=\\{)cslreferences(?=\\})',"thebibliography")
-    tex_sub_new = str_replace(tex_sub_new, '\\\\begin\\{thebibliography\\}','\\\\section*{References}\n\\\\begin{thebibliography}{99}\n\n')
-    #### 样式1 ----  每一个参考文献在不同行
-    style_1 = paste(tex_sub_new,collapse = "\n") #
-    
-    #### 样式2 ---- 每一个参考文献在同一行
-    tex_sub_new[tex_sub_new == ""] = "\n\n"
-    tex_sub_new_2 = paste(tex_sub_new, collapse = " ")
-    tex_sub_new_2 = str_replace_all(tex_sub_new_2,pattern = " {2,}",replacement = " ") # 处理多余的空格
-    style_2 =  str_replace_all(tex_sub_new_2,pattern = "\n\n ",replacement = "\n\n") # 处理换行后的空格
-    
-    
-    
-    return(list(style_1,style_2,style_0))
+    return(value)
   })
   
   
@@ -237,8 +358,8 @@ server <- function(input, output) {
   ###############################################
   ############### 输出警告函数,----- 即 tex中有引用,但是bib数据库中不存在该参考文献  ###############
   output$out_warning <- renderText({
-    d1 = randomVals() # 返回一个list
-    if(length(d1)>1){
+    df = randomVals()[[1]] # 返回一个list
+    if(length(df)>1 & !is_empty(df)){
       return('无')
     }
   })
@@ -273,107 +394,81 @@ server <- function(input, output) {
   ##########################################
   ##### 输出引用的bib和key################
   out_yinyong = reactive({
-    data_list = randomVals()
-    tex_key  =  data_list[[1]]     # tex_key 为 key值在tex 中出现的顺序
-    bib_df = data_list[[2]]     # bib_df 为 bib数据库中key值与类型的对应 
-    set_bib_diff = data_list[[3]]     # set_bib_diff 为bib 中有,但tex没有出现的数据
-    file_bib_paste = data_list[[4]]       # file_bib_paste 为bib数据库--只不过合并了
+    df = randomVals()[[1]]
+    df = df[!is.na(df$name),]
     if(input$inSelect == '按tex文中引用顺序'){
-      tex_key = tex_key
+      df = dplyr::arrange(df,name)
     }else if(input$inSelect == '按key字母升序'){
-      tex_key = sort(tex_key)
+      df = dplyr::arrange(df,key)
     }else if(input$inSelect=='按key字母降序'){
-      tex_key = sort(tex_key,decreasing = T)
+      df = dplyr::arrange(df,desc(key))
     }else if(input$inSelect == '按文献类型字母升序排序'){
-      temp_df = as.data.frame(tex_key)
-      bib_df2_temp = inner_join(bib_df,temp_df,by=c('key' = 'tex_key'))
-      bib_df2_temp = arrange(bib_df2_temp,type, key) 
-      tex_key = bib_df2_temp$key
+      df = arrange(df,typebib)
     }else if(input$inSelect == '按文献类型字母降序排序'){
-      temp_df = as.data.frame(tex_key)
-      bib_df2_temp = inner_join(bib_df,temp_df,by=c('key' = 'tex_key'))
-      bib_df2_temp = arrange(bib_df2_temp,desc(type),key) 
-      tex_key = bib_df2_temp$key
+      df = arrange(df,desc(typebib))
     }else{
-      ################### 按照文献类型排序
-      temp_df = as.data.frame(tex_key)
-      bib_df2_temp = inner_join(bib_df,temp_df,by=c('key' = 'tex_key'))
-      bib_df2_temp = arrange(bib_df2_temp,type) 
-      tex_key = bib_df2_temp$key
+      df = arrange(df,typebib)################### 按照文献类型排序
     }
     
-    if(is_empty(tex_key)||is.na(tex_key)){
+    if(is_empty(df)){
       s_temp = 'bib数据库中的文献,一篇文章都没有被引用'
       return(list(s_temp,s_temp))
     }else{
-      cite_bib = c()
-      k = 0
-      for(i in tex_key){
-        k = k+1
-        s1_keyword = paste0("\\n@.*?",i,"[\\s\\S]*?(\\n\\}(\\n)*?(?=@)|\\n\\})")
-        one_bib = str_extract(file_bib_paste,s1_keyword)
-        cite_bib =paste0(cite_bib,one_bib) 
-        #  cat(one_bib,file = 'yinyong.bib',append = T) # 带引用的参考文献
-      }
+      dfSub = df
+      tex_key = purrr::map(dfSub$value,function(x){
+        paste0(x,collapse = '\n')
+      })
       
-      cite_key = paste(tex_key,collapse = '\n')
-      cite_key = paste0('总计: ', k ,' 篇参考文献被引用\n\n',cite_key)
-      return( list(cite_bib,cite_key) )
+      cite_bib = paste(tex_key,collapse = '\n\n\n')
+      cite_bib = paste0('总计: ', nrow(dfSub),' 篇参考文献被引用\n\n',cite_bib)
+      cite_key = paste(dfSub$key,collapse = '\n')
+      return(list(cite_key,cite_bib ))
     }
   })
   out_no_yinyong = reactive({
-    data_list = randomVals()
-    tex_key  =  data_list[[1]]     # tex_key 为 key值在tex 中出现的顺序
-    bib_df = data_list[[2]]     # bib_df 为 bib数据库中key值与类型的对应 
-    set_bib_diff = data_list[[3]]     # set_bib_diff 为bib 中有,但tex没有出现的数据
-    file_bib_paste = data_list[[4]]       # file_bib_paste 为bib数据库--只不过合并了
-    
-    if(is_empty(set_bib_diff) || is.na(set_bib_diff)){
+    df = randomVals()[[1]]
+    if(sum(is.na( df$name)) == 0 ){
       s_temp ='刚好没有引用的key,\n(即bib数据库中的文献全部被引用)'
       return(list(s_temp,s_temp))
     }else{
-      nocite_bib = c()
-      k = 0
-      for(i in set_bib_diff){
-        k = k+1
-        s1_keyword = paste0("\\n@.*?",i,"[\\s\\S]*?(\\n\\}(\\n)*?(?=@)|\\n\\})")
-        one_bib = str_extract(file_bib_paste,s1_keyword)
-        nocite_bib =paste0(nocite_bib,one_bib) 
-        #cat(one_bib,file = 'noyinyong.bib',append = T) # 带引用的参考文献
-      }
-      nocite_key = paste(set_bib_diff,collapse = '\n')
-      nocite_key = paste0('总计: ', k ,' 篇参考文献没被引用\n\n',nocite_key)
-      return(list(nocite_bib,nocite_key))
+      dfSub = df[is.na(df$name),]
+      nocite = purrr::map(dfSub$value,function(x){
+        paste0(x,collapse = '\n')
+      })
+      nocite_bib = paste(nocite,collapse = '\n\n\n')
+      nocite_bib = paste0('总计: ', nrow(dfSub),' 篇参考文献没有被引用\n\n',nocite_bib)
+      nocite_key = paste(dfSub$key,collapse = '\n')
+      return(list(nocite_key,nocite_bib))
     }
   })
   
   output$bib01yinyongclip <- renderUI({
-    rclipButton("bib01yinyongclip", " bib cite Copy", out_yinyong()[[1]], icon("clipboard"))
+    rclipButton("bib01yinyongclip", " bib cite Copy", out_yinyong()[[2]], icon("clipboard"))
   })
   output$bib01yinyong <- renderText({
-    out_yinyong()[[1]]
+    out_yinyong()[[2]]
   })
   output$key01yinyongclip <- renderUI({
-    rclipButton("key01yinyongclip", "key cite Copy", out_yinyong()[[2]], icon("clipboard"))
+    rclipButton("key01yinyongclip", "key cite Copy", out_yinyong()[[1]], icon("clipboard"))
   })
   output$key01yinyong <- renderText({
-    out_yinyong()[[2]]
+    out_yinyong()[[1]]
   })
   ############################################
   
   ############################################
   ###### 输出没有引用的bib和key##############
   output$bib02noyinyongclip <- renderUI({
-    rclipButton("bib02noyinyongclip", "bib no cite Copy", out_no_yinyong()[[1]], icon("clipboard"))
+    rclipButton("bib02noyinyongclip", "bib no cite Copy", out_no_yinyong()[[2]], icon("clipboard"))
   })
   output$bib02noyinyong <- renderText({
-    out_no_yinyong()[[1]]
+    out_no_yinyong()[[2]]
   })
   output$key02noyinyongclip <- renderUI({
-    rclipButton("key02noyinyongclip", "key no cite Copy", out_no_yinyong()[[2]], icon("clipboard"))
+    rclipButton("key02noyinyongclip", "key no cite Copy", out_no_yinyong()[[1]], icon("clipboard"))
   })
   output$key02noyinyong <- renderText({
-    out_no_yinyong()[[2]]
+    out_no_yinyong()[[1]]
   })
   ############################################
   
@@ -382,7 +477,35 @@ server <- function(input, output) {
   output$out_runenvir <- renderPrint({
     print(list(sessionInfo(),dir()))
   })
+  ############################################
+  ###### 输出期刊缩写对照表 ################
+  output$jouranl_abbr <- renderDataTable({
+    df = randomVals()[[1]]
+    if(is_empty(df)){
+      temp = data.frame('NOTE'='整个bib没有找到对应的缩写!!!')
+      return(temp)
+    }else{
+      df$value =  purrr::map(df$value,function(x){
+        paste0(x,collapse = '\n\n')
+      })
+      dff = df[,c("key",'name',"sitenum",'value','typebib','AUTHOR','JOURNAL')]
+      return(dff)
+    }
+  },options = list(pageLength = 100)
+  )
+  output$abbrsource <- renderDataTable({
+    abbrtable = randomVals()[[2]]
+    if(is_empty(abbrtable)){
+      temp = data.frame('NOTE'='整个bib没有找到对应的缩写!!!')
+      return(temp)
+    }else{
+      return(abbrtable)
+    }
+  },options = list(pageLength = 100)
+  )
 }
 
-# Run the application
+
+
+##### Run the application
 shinyApp(ui = ui, server = server)
