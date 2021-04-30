@@ -31,6 +31,7 @@ clear_file = function(mypattern = '(.*\\.R$)|(.*\\.Rproj$)' ){
     error = function(e) {
       # return a safeError if a parsing error occurs
       print("出错啦")
+      clear_file()
       stop(safeError(e))
     }
   )
@@ -43,6 +44,7 @@ tidy_tex = function(tex){
   from1 = grep('\\\\begin\\{document\\}',tex)
   from2 = grep('\\\\maketitle',tex)
   if(is_empty(from1) && is_empty(from2)){
+    clear_file()
     stop('没找到开始的地方')
   }else if(!is_empty(from1) && is_empty(from2)){
     ind_from = from1
@@ -51,11 +53,13 @@ tidy_tex = function(tex){
   }else if (from1 <= from2){
     ind_from = from2
   }else{
+    clear_file()
     stop('索引值出错,没找到开始的地方')
   }
   to1 = grep('\\\\hypertarget\\{refs\\}',tex,ignore.case = T)
   to2 = grep('\\\\begin\\{cslreferences\\}',tex,ignore.case = T)
   if(is_empty(to1) && is_empty(to2)){
+    clear_file()
     stop('没找到结束的地方')
   }else if(!is_empty(to1) && is_empty(to2)){
     ind_to = to1
@@ -64,6 +68,7 @@ tidy_tex = function(tex){
   }else if (to1 <= to2){
     ind_to = to1
   }else{
+    clear_file()
     stop('索引值出错,没找到结束的地方')
   }
   
@@ -163,9 +168,11 @@ style_fun = function(texfile){
   ind_end  = grep("\\\\end\\{cslreferences\\}",tex,ignore.case = T)
   to2 = grep('\\\\begin\\{cslreferences\\}',tex,ignore.case = T)
   if(is_empty(to2)){
+    clear_file()
     stop("参考文献没有开始标记")
   }
   if(is_empty(ind_end)){
+    clear_file()
     stop('参考文献没有结束标记')
   }
   
@@ -316,9 +323,11 @@ reorder_bib_fun = function(filepath){
   m = length(index)
   index2 = c(index[2:m],length(tex_bib))
   if(length(index) != length(index2)){
+    clear_file()
     stop('cite长度不等')
   }
   if(length(index)==0){
+    clear_file()
     stop('cite长度居然为0,直接退出')
   }
   tex_bib_he = mapply(function(x,y){paste(tex_bib[x:(y-1)],collapse = '')}, index,index2)
@@ -540,6 +549,7 @@ server <- function(input, output) {
       },
       error = function(e) {
         # return a safeError if a parsing error occurs
+        clear_file()
         stop(safeError(e))
       }
     )
@@ -557,6 +567,7 @@ server <- function(input, output) {
     tex_diff = !is.na(df$key)  & is.na(df$sitenum) # tex 有 , 而bib没有
     if(sum(tex_diff) >=1){
       s = paste0(df$key[tex_diff],collapse = "\n")
+      clear_file()
       stop(paste0("出错,以下参考文献在tex文件中引用了,但是在数据库中不存在该文献!!\n", s,'\n请检查key后重新运行') )
     }else{
       
@@ -628,10 +639,12 @@ server <- function(input, output) {
         texpath = input$file_bibtex$datapath
         #texpath = '/Users/zsc/Desktop/未命名文件夹/我的论文终稿/参考文献排序/MeasuringTrans02的副本.tex'
         list_df = reorder_bib_fun(filepath = texpath)
+        clear_file()
         return(list_df)
       },
       error = function(e) {
         # return a safeError if a parsing error occurs
+        clear_file()
         stop(safeError(e))
       }
     )
@@ -697,7 +710,7 @@ server <- function(input, output) {
   })
   
   ##########################################
-  #####  输出参考文献的类型, 
+  #####  输出参考文献的类型,
   ##### 1 表示数字标签  0 表示非数字标签,即作者年份标签################
   output$out_is_clstype1 <- renderText({
     is_type = tex_cite_style()[[4]]
