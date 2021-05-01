@@ -820,7 +820,11 @@ server <- function(input, output) {
   ############################################
   ###### 输出运行环境 ####################
   output$out_runenvir <- renderPrint({
-    print(list(sessionInfo(),dir()))
+    print(list("sessionInfo"=sessionInfo(),
+               "RStudio.Version"=RStudio.Version(),
+               "devtools::session_info"=devtools::session_info(),
+               "pandoc_version" = rmarkdown::pandoc_version(),
+               "dir"=dir()))
   })
   ############################################
   ###### 输出期刊缩写对照表 ################
