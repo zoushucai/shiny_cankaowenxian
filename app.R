@@ -365,6 +365,11 @@ clear_file()
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   titlePanel( title = h2("自用参考文献样式调整", align = "left"), windowTitle = '自用参考文献样式调整' ),
+  HTML("<p>注意: </p>"),
+  HTML("<p>1. 上传的tex文件最好能够在本地正常编译</p>"),
+  HTML("<p>2. 上传的bib文件仔细检查,这个涉及到最后的生成格式</p>"),
+  HTML("<p>&nbsp; &nbsp; &nbsp; &nbsp;&nbsp;当遇到三个字的中国作者,有可能名是小写的, eg: Shucai, Zou  应该写为 Shu-Cai, Zou</p>"),
+  HTML("<p>3. bug反馈:&nbsp;&nbsp; <a href='https://github.com/zoushucai/journalabbr/issues'>https://github.com/zoushucai/journalabbr/issues </a> </p>"),
   rclipboardSetup(), # 剪切板设置,必须在开头声明,后面才能用,这是一段js的调用
   tabsetPanel(
     tabPanel("Input",
