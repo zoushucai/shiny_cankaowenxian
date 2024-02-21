@@ -1,4 +1,8 @@
 if (!require("pacman")) install.packages("pacman")
+if (!require("remotes")) install.packages("remotes")
+  
+remotes::install_github("zoushucai/journalabbr")
+
 pacman::p_load(
   "shiny", "stringr", "stringi", "data.table",
   "rclipboard", "knitr", "rmarkdown", "purrr", "tidytable",
