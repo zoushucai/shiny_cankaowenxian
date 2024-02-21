@@ -5,7 +5,7 @@ account: zoushucai
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 1399068
-bundleId: 8280798
+bundleId: 8280908
 url: https://zoushucai.shinyapps.io/shiny_cankaowenxian/
 version: 1
 asMultiple: FALSE
