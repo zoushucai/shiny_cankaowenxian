@@ -1,0 +1,779 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  letterpaper,
+  DIV=11,
+  numbers=noendperiod]{scrartcl}
+
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else  
+    % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Make \paragraph and \subparagraph free-standing
+\makeatletter
+\ifx\paragraph\undefined\else
+  \let\oldparagraph\paragraph
+  \renewcommand{\paragraph}{
+    \@ifstar
+      \xxxParagraphStar
+      \xxxParagraphNoStar
+  }
+  \newcommand{\xxxParagraphStar}[1]{\oldparagraph*{#1}\mbox{}}
+  \newcommand{\xxxParagraphNoStar}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+  \let\oldsubparagraph\subparagraph
+  \renewcommand{\subparagraph}{
+    \@ifstar
+      \xxxSubParagraphStar
+      \xxxSubParagraphNoStar
+  }
+  \newcommand{\xxxSubParagraphStar}[1]{\oldsubparagraph*{#1}\mbox{}}
+  \newcommand{\xxxSubParagraphNoStar}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+\makeatother
+
+
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+% definitions for citeproc citations
+\NewDocumentCommand\citeproctext{}{}
+\NewDocumentCommand\citeproc{mm}{%
+  \begingroup\def\citeproctext{#2}\cite{#1}\endgroup}
+\makeatletter
+ % allow citations to break across lines
+ \let\@cite@ofmt\@firstofone
+ % avoid brackets around text for \cite:
+ \def\@biblabel#1{}
+ \def\@cite#1#2{{#1\if@tempswa , #2\fi}}
+\makeatother
+\newlength{\cslhangindent}
+\setlength{\cslhangindent}{1.5em}
+\newlength{\csllabelwidth}
+\setlength{\csllabelwidth}{3em}
+\newenvironment{CSLReferences}[2] % #1 hanging-indent, #2 entry-spacing
+ {\begin{list}{}{%
+  \setlength{\itemindent}{0pt}
+  \setlength{\leftmargin}{0pt}
+  \setlength{\parsep}{0pt}
+  % turn on hanging indent if param 1 is 1
+  \ifodd #1
+   \setlength{\leftmargin}{\cslhangindent}
+   \setlength{\itemindent}{-1\cslhangindent}
+  \fi
+  % set entry spacing
+  \setlength{\itemsep}{#2\baselineskip}}}
+ {\end{list}}
+\usepackage{calc}
+\newcommand{\CSLBlock}[1]{\hfill\break\parbox[t]{\linewidth}{\strut\ignorespaces#1\strut}}
+\newcommand{\CSLLeftMargin}[1]{\parbox[t]{\csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLRightInline}[1]{\parbox[t]{\linewidth - \csllabelwidth}{\strut#1\strut}}
+\newcommand{\CSLIndent}[1]{\hspace{\cslhangindent}#1}
+
+\KOMAoption{captions}{tableheading}
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\AtBeginDocument{%
+\ifdefined\contentsname
+  \renewcommand*\contentsname{Table of contents}
+\else
+  \newcommand\contentsname{Table of contents}
+\fi
+\ifdefined\listfigurename
+  \renewcommand*\listfigurename{List of Figures}
+\else
+  \newcommand\listfigurename{List of Figures}
+\fi
+\ifdefined\listtablename
+  \renewcommand*\listtablename{List of Tables}
+\else
+  \newcommand\listtablename{List of Tables}
+\fi
+\ifdefined\figurename
+  \renewcommand*\figurename{Figure}
+\else
+  \newcommand\figurename{Figure}
+\fi
+\ifdefined\tablename
+  \renewcommand*\tablename{Table}
+\else
+  \newcommand\tablename{Table}
+\fi
+}
+\@ifpackageloaded{float}{}{\usepackage{float}}
+\floatstyle{ruled}
+\@ifundefined{c@chapter}{\newfloat{codelisting}{h}{lop}}{\newfloat{codelisting}{h}{lop}[chapter]}
+\floatname{codelisting}{Listing}
+\newcommand*\listoflistings{\listof{codelisting}{List of Listings}}
+\makeatother
+\makeatletter
+\makeatother
+\makeatletter
+\@ifpackageloaded{caption}{}{\usepackage{caption}}
+\@ifpackageloaded{subcaption}{}{\usepackage{subcaption}}
+\makeatother
+
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\usepackage{bookmark}
+
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Untitled},
+  colorlinks=true,
+  linkcolor={blue},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+
+\title{Untitled}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+
+\textsuperscript{{[}\citeproc{ref-franco2013fuzzy}{1}{]}}
+
+\textsuperscript{{[}\citeproc{ref-ozturk2015valued}{2}{]}}
+
+\textsuperscript{{[}\citeproc{ref-tsoukias2003characterization}{3}{]}}
+
+\textsuperscript{{[}\citeproc{ref-liu2021measuring}{4}{]}}
+
+\textsuperscript{{[}\citeproc{ref-cavallo2016ensuring}{5}{]}}
+
+\textsuperscript{{[}\citeproc{ref-cavallo2015reciprocal}{6}{]}}
+
+\textsuperscript{{[}\citeproc{ref-switalski2003general}{7}{]}}
+
+\textsuperscript{{[}\citeproc{ref-de2005transitivity}{8}{]}}
+
+\textsuperscript{{[}\citeproc{ref-xu2013ordinal}{9}{]}}
+
+\textsuperscript{{[}\citeproc{ref-tanino1984fuzzy}{10}{]}}
+
+\textsuperscript{{[}\citeproc{ref-chen2019group}{11}{]}}
+
+\textsuperscript{{[}\citeproc{ref-tang2018ranking}{12}{]}}
+
+\textsuperscript{{[}\citeproc{ref-zhou2015preference}{13}{]}}
+
+\textsuperscript{{[}\citeproc{ref-pan2017multi}{14}{]}}
+
+\textsuperscript{{[}\citeproc{ref-zhang2013relationships}{15}{]}}
+
+\textsuperscript{{[}\citeproc{ref-xie2020new}{16}{]}}
+
+\textsuperscript{{[}\citeproc{ref-dong2008consistency}{17}{]}}
+
+\textsuperscript{{[}\citeproc{ref-arrow2010handbook}{18}{]}}
+
+\textsuperscript{{[}\citeproc{ref-vargas2016voting}{19}{]}}
+
+\textsuperscript{{[}\citeproc{ref-tideman1987independence}{20}{]}}
+
+\textsuperscript{{[}\citeproc{ref-colomer2013ramon}{21}{]}}
+
+\textsuperscript{{[}\citeproc{ref-kulakowski2018inconsistency}{22}{]}}
+
+\textsuperscript{{[}\citeproc{ref-condorcet1785essay}{23}{]}}
+
+\textsuperscript{{[}\citeproc{ref-liu2021transitivity}{24}{]}}
+
+\textsuperscript{{[}\citeproc{ref-kuo2021ordinal}{25}{]}}
+
+\textsuperscript{{[}\citeproc{ref-csato2024right}{26}{]}}
+
+\textsuperscript{{[}\citeproc{ref-liang2020consistency}{27}{]}}
+
+\textsuperscript{{[}\citeproc{ref-greco2010dominance}{28}{]}}
+
+\textsuperscript{{[}\citeproc{ref-kou2014cosine}{29}{]}}
+
+\textsuperscript{{[}\citeproc{ref-wang2007priority}{30}{]}}
+
+\textsuperscript{{[}\citeproc{ref-saaty1980analytic}{31}{]}}
+
+\textsuperscript{{[}\citeproc{ref-faramondi2023robustness}{32}{]}}
+
+\textsuperscript{{[}\citeproc{ref-basile2002weak}{33}{]}}
+
+\textsuperscript{{[}\citeproc{ref-basile2006transitive}{34}{]}}
+
+\textsuperscript{{[}\citeproc{ref-regenwetter2011transitivity}{35}{]}}
+
+\textsuperscript{{[}\citeproc{ref-ramik2012measuring}{36}{]}}
+
+\textsuperscript{{[}\citeproc{ref-cavallo2016weak}{37}{]}}
+
+\textsuperscript{{[}\citeproc{ref-gass1998tournaments}{38}{]}}
+
+\textsuperscript{{[}\citeproc{ref-ma2006method}{39}{]}}
+
+\textsuperscript{{[}\citeproc{ref-kendall1940method}{40}{]}}
+
+\textsuperscript{{[}\citeproc{ref-iida2009ordinality}{41}{]}}
+
+\textsuperscript{{[}\citeproc{ref-torres2022transitive}{42}{]}}
+
+\textsuperscript{{[}\citeproc{ref-faramondi2020incomplete}{43}{]}}
+
+\textsuperscript{{[}\citeproc{ref-agoston2024lexicographically}{44}{]}}
+
+\textsuperscript{{[}\citeproc{ref-amenta2020transitivity}{45}{]}}
+
+\textsuperscript{{[}\citeproc{ref-mi2022transitivity}{46}{]}}
+
+\textsuperscript{{[}\citeproc{ref-martinetti2017correspondence}{47}{]}}
+
+\textsuperscript{{[}\citeproc{ref-brunelli2013inconsistency}{48}{]}}
+
+\textsuperscript{{[}\citeproc{ref-rezaei2015best}{49}{]}}
+
+\textsuperscript{{[}\citeproc{ref-brunelli2018survey}{50}{]}}
+
+\textsuperscript{{[}\citeproc{ref-liu2020deriving}{51}{]}}
+
+\textsuperscript{{[}\citeproc{ref-sato2023inconsistency}{52}{]}}
+
+\textsuperscript{{[}\citeproc{ref-bortot2023novel}{53}{]}}
+
+\textsuperscript{{[}\citeproc{ref-pant2022consistency}{54}{]}}
+
+\textsuperscript{{[}\citeproc{ref-fernandes2022efficiency}{55}{]}}
+
+\textsuperscript{{[}\citeproc{ref-dasgupta1996transitivity}{56}{]}}
+
+\textsuperscript{{[}\citeproc{ref-bouyssou1997acyclic}{57}{]}}
+
+\textsuperscript{{[}\citeproc{ref-garcia2004consistency}{58}{]}}
+
+\textsuperscript{{[}\citeproc{ref-orlovsky1993decision}{59}{]}}
+
+\textsuperscript{{[}\citeproc{ref-tanino1988fuzzy}{60}{]}}
+
+\textsuperscript{{[}\citeproc{ref-baets2008similarity}{61}{]}}
+
+\textsuperscript{{[}\citeproc{ref-koczkodaj2018axiomatization}{62}{]}}
+
+\textsuperscript{{[}\citeproc{ref-de2013generalized}{63}{]}}
+
+\textsuperscript{{[}\citeproc{ref-aguaron2003geometric}{64}{]}}
+
+\textsuperscript{{[}\citeproc{ref-aguaron2021reducing}{65}{]}}
+
+\textsuperscript{{[}\citeproc{ref-zeshui1999consistency}{66}{]}}
+
+\textsuperscript{{[}\citeproc{ref-marnowitz1952portfolio}{67}{]}}
+
+\textsuperscript{{[}\citeproc{ref-rubinstein2002markowitz}{68}{]}}
+
+\textsuperscript{{[}\citeproc{ref-petturiti2024impact}{69}{]}}
+
+\textsuperscript{{[}\citeproc{ref-staino2020nested}{70}{]}}
+
+\textsuperscript{{[}\citeproc{ref-zaimovic2021many}{71}{]}}
+
+\textsuperscript{{[}\citeproc{ref-alexeev2015equity}{72}{]}}
+
+\textsuperscript{{[}\citeproc{ref-akshare}{73}{]}}
+
+\phantomsection\label{refs}
+\begin{CSLReferences}{0}{0}
+\bibitem[\citeproctext]{ref-franco2013fuzzy}
+\CSLLeftMargin{{[}1{]} }%
+\CSLRightInline{FRANCO C, MONTERO J, RODRÍGUEZ J T. A fuzzy and bipolar
+approach to preference modeling with application to need and
+desire{[}J{]}. Fuzzy Sets Syst., 2013, 214: 20-34.}
+
+\bibitem[\citeproctext]{ref-ozturk2015valued}
+\CSLLeftMargin{{[}2{]} }%
+\CSLRightInline{ÖZTÜRK M, TSOUKIÀS A. A valued Ferrers relation for
+interval comparison{[}J{]}. Fuzzy Sets Syst., 2015, 266: 47-66.}
+
+\bibitem[\citeproctext]{ref-tsoukias2003characterization}
+\CSLLeftMargin{{[}3{]} }%
+\CSLRightInline{TSOUKIÀS A, VINCKE P. A characterization of PQI interval
+orders{[}J{]}. Discrete Appl. Math., 2003, 127(2): 387-397.}
+
+\bibitem[\citeproctext]{ref-liu2021measuring}
+\CSLLeftMargin{{[}4{]} }%
+\CSLRightInline{LIU F, ZOU S, PEDRYCZ W. Measuring weak consistency and
+weak transitivity of pairwise comparison matrices{[}J{]}. IEEE Trans.
+Cybern., 2021, 53(1): 303-314.}
+
+\bibitem[\citeproctext]{ref-cavallo2016ensuring}
+\CSLLeftMargin{{[}5{]} }%
+\CSLRightInline{CAVALLO B, D'APUZZO L. Ensuring reliability of the
+weighting vector: Weak consistent pairwise comparison matrices{[}J{]}.
+Fuzzy Sets Syst., 2016, 296: 21-34.}
+
+\bibitem[\citeproctext]{ref-cavallo2015reciprocal}
+\CSLLeftMargin{{[}6{]} }%
+\CSLRightInline{CAVALLO B, D'APUZZO L. Reciprocal transitive matrices
+over abelian linearly ordered groups: characterizations and application
+to multi-criteria decision problems{[}J{]}. Fuzzy Sets Syst., 2015, 266:
+33-46.}
+
+\bibitem[\citeproctext]{ref-switalski2003general}
+\CSLLeftMargin{{[}7{]} }%
+\CSLRightInline{ŚWITALSKI Z. General Transitivity Conditions for Fuzzy
+Reciprocal Preference Matrices{[}J{]}. Fuzzy Sets Syst., 2003, 137(1):
+85-100.}
+
+\bibitem[\citeproctext]{ref-de2005transitivity}
+\CSLLeftMargin{{[}8{]} }%
+\CSLRightInline{DE BAETS B, DE MEYER H. Transitivity frameworks for
+reciprocal relations: cycle-transitivity versus FG-transitivity{[}J{]}.
+Fuzzy Sets Syst., 2005, 152(2): 249-270.}
+
+\bibitem[\citeproctext]{ref-xu2013ordinal}
+\CSLLeftMargin{{[}9{]} }%
+\CSLRightInline{XU Y, PATNAYAKUNI R, WANG H. The ordinal consistency of
+a fuzzy preference relation{[}J{]}. Inf. Sci., 2013, 224: 152-164.}
+
+\bibitem[\citeproctext]{ref-tanino1984fuzzy}
+\CSLLeftMargin{{[}10{]} }%
+\CSLRightInline{TANINO T. Fuzzy preference orderings in group decision
+making{[}J{]}. Fuzzy Sets Syst., 1984, 12(2): 117-131.}
+
+\bibitem[\citeproctext]{ref-chen2019group}
+\CSLLeftMargin{{[}11{]} }%
+\CSLRightInline{CHEN H, XU G. Group decision making with incomplete
+intuitionistic fuzzy preference relations based on additive
+consistency{[}J{]}. computers \& industrial engineering, 2019, 135:
+560-567.}
+
+\bibitem[\citeproctext]{ref-tang2018ranking}
+\CSLLeftMargin{{[}12{]} }%
+\CSLRightInline{TANG J, MENG F. Ranking objects from group decision
+making with interval-valued hesitant fuzzy preference relations in view
+of additive consistency and consensus{[}J{]}. Knowledge-Based Syst.,
+2018, 162: 46-61.}
+
+\bibitem[\citeproctext]{ref-zhou2015preference}
+\CSLLeftMargin{{[}13{]} }%
+\CSLRightInline{ZHOU W, XU Z, CHEN M. Preference relations based on
+hesitant-intuitionistic fuzzy information and their application in group
+decision making{[}J{]}. computers \& industrial engineering, 2015, 87:
+163-175.}
+
+\bibitem[\citeproctext]{ref-pan2017multi}
+\CSLLeftMargin{{[}14{]} }%
+\CSLRightInline{PAN W, SHE K, WEI P. Multi-granulation fuzzy preference
+relation rough set for ordinal decision system{[}J{]}. Fuzzy Sets Syst.,
+2017, 312: 87-108.}
+
+\bibitem[\citeproctext]{ref-zhang2013relationships}
+\CSLLeftMargin{{[}15{]} }%
+\CSLRightInline{ZHANG Y L, LUO M K. Relationships between covering-based
+rough sets and relation-based rough sets{[}J{]}. Inf. Sci., 2013, 225:
+55-71.}
+
+\bibitem[\citeproctext]{ref-xie2020new}
+\CSLLeftMargin{{[}16{]} }%
+\CSLRightInline{XIE W, XU Z, REN Z, 等. A new multi-criteria decision
+model based on incomplete dual probabilistic linguistic preference
+relations{[}J{]}. Appl. Soft Comput., 2020, 91: 106237.}
+
+\bibitem[\citeproctext]{ref-dong2008consistency}
+\CSLLeftMargin{{[}17{]} }%
+\CSLRightInline{DONG Y, XU Y, LI H. On consistency measures of
+linguistic preference relations{[}J{]}. Eur. J. Oper. Res., 2008,
+189(2): 430-444.}
+
+\bibitem[\citeproctext]{ref-arrow2010handbook}
+\CSLLeftMargin{{[}18{]} }%
+\CSLRightInline{ARROW K J, SEN A, SUZUMURA K. Handbook of social choice
+and welfare{[}M{]}. Elsevier, 2010.}
+
+\bibitem[\citeproctext]{ref-vargas2016voting}
+\CSLLeftMargin{{[}19{]} }%
+\CSLRightInline{VARGAS L G. Voting with intensity of preferences{[}J{]}.
+international journal of information technology \& decision making,
+2016, 15(04): 839-859.}
+
+\bibitem[\citeproctext]{ref-tideman1987independence}
+\CSLLeftMargin{{[}20{]} }%
+\CSLRightInline{TIDEMAN T N. Independence of clones as a criterion for
+voting rules{[}J{]}. Soc. Choice Welf., 1987, 4(3): 185-206.}
+
+\bibitem[\citeproctext]{ref-colomer2013ramon}
+\CSLLeftMargin{{[}21{]} }%
+\CSLRightInline{COLOMER J M. Ramon Llull: from {``Ars electionis''} to
+social choice theory{[}J{]}. Soc. Choice Welf., 2013, 40(2): 317-328.}
+
+\bibitem[\citeproctext]{ref-kulakowski2018inconsistency}
+\CSLLeftMargin{{[}22{]} }%
+\CSLRightInline{KUŁAKOWSKI K. Inconsistency in the ordinal pairwise
+comparisons method with and without ties{[}J{]}. Eur. J. Oper. Res.,
+2018, 270(1): 314-327.}
+
+\bibitem[\citeproctext]{ref-condorcet1785essay}
+\CSLLeftMargin{{[}23{]} }%
+\CSLRightInline{CONDORCET M de. Essay on the Application of Analysis to
+the Probability of Majority Decisions{[}J{]}. paris: imprimerie royale,
+1785: 1785.}
+
+\bibitem[\citeproctext]{ref-liu2021transitivity}
+\CSLLeftMargin{{[}24{]} }%
+\CSLRightInline{LIU F, ZOU S C, YOU Q R. Transitivity measurements of
+fuzzy preference relations{[}J{]}. Fuzzy Sets Syst., 2021, 422: 27-47.}
+
+\bibitem[\citeproctext]{ref-kuo2021ordinal}
+\CSLLeftMargin{{[}25{]} }%
+\CSLRightInline{KUO T. An Ordinal Consistency Indicator for Pairwise
+Comparison Matrix{[}J{]}. symmetry, 2021, 13(11): 2183.}
+
+\bibitem[\citeproctext]{ref-csato2024right}
+\CSLLeftMargin{{[}26{]} }%
+\CSLRightInline{CSATÓ L. Right-left asymmetry of the eigenvector method:
+A simulation study{[}J{]}. Eur. J. Oper. Res., 2024, 313(2): 708-717.}
+
+\bibitem[\citeproctext]{ref-liang2020consistency}
+\CSLLeftMargin{{[}27{]} }%
+\CSLRightInline{LIANG F, BRUNELLI M, REZAEI J. Consistency issues in the
+best worst method: Measurements and thresholds{[}J{]}. Omega (Westport),
+2020, 96: 102175.}
+
+\bibitem[\citeproctext]{ref-greco2010dominance}
+\CSLLeftMargin{{[}28{]} }%
+\CSLRightInline{GRECO S, MATARAZZO B, SŁOWIŃSKI R. Dominance-based rough
+set approach to preference learning from pairwise comparisons in case of
+decision under uncertainty{[}C{]}//Computational Intelligence for
+Knowledge-Based Systems Design. Springer, 2010: 584-594.}
+
+\bibitem[\citeproctext]{ref-kou2014cosine}
+\CSLLeftMargin{{[}29{]} }%
+\CSLRightInline{KOU G, LIN C S. A cosine maximization method for the
+priority vector derivation in {AHP}{[}J{]}. Eur. J. Oper. Res., 2014,
+235(1): 225-232.}
+
+\bibitem[\citeproctext]{ref-wang2007priority}
+\CSLLeftMargin{{[}30{]} }%
+\CSLRightInline{WANG Y M, PARKAN C, LUO Y. Priority estimation in the
+{AHP} through maximization of correlation coefficient{[}J{]}. Appl.
+Math. Modell., 2007, 31(12): 2711-2718.}
+
+\bibitem[\citeproctext]{ref-saaty1980analytic}
+\CSLLeftMargin{{[}31{]} }%
+\CSLRightInline{SAATY T L. The Analytic Hierarchy Process, New York:
+McGrew Hill{[}J{]}. international, translated to russian, portuguesses
+and chinese, revised edition, paperback (1996, 2000), pittsburgh: rws
+publications, 1980, 9: 19-22.}
+
+\bibitem[\citeproctext]{ref-faramondi2023robustness}
+\CSLLeftMargin{{[}32{]} }%
+\CSLRightInline{FARAMONDI L, OLIVA G, SETOLA R, 等. Robustness to rank
+reversal in pairwise comparison matrices based on uncertainty
+bounds{[}J{]}. Eur. J. Oper. Res., 2023, 304(2): 676-688.}
+
+\bibitem[\citeproctext]{ref-basile2002weak}
+\CSLLeftMargin{{[}33{]} }%
+\CSLRightInline{BASILE L, D'APUZZO L. Weak consistency and quasi-linear
+means imply the actual ranking{[}J{]}. Int. J. Uncertainty Fuzziness
+Knowledge Based Syst., 2002, 10(03): 227-239.}
+
+\bibitem[\citeproctext]{ref-basile2006transitive}
+\CSLLeftMargin{{[}34{]} }%
+\CSLRightInline{BASILE L, D'APUZZO L. Transitive matrices, strict
+preference order and ordinal evaluation operators{[}J{]}. Soft Comput.,
+2006, 10: 933-940.}
+
+\bibitem[\citeproctext]{ref-regenwetter2011transitivity}
+\CSLLeftMargin{{[}35{]} }%
+\CSLRightInline{REGENWETTER M, DANA J, DAVIS-STOBER C P. Transitivity of
+preferences.{[}J{]}. Psychol. Rev., 2011, 118(1): 42.}
+
+\bibitem[\citeproctext]{ref-ramik2012measuring}
+\CSLLeftMargin{{[}36{]} }%
+\CSLRightInline{RAMIK J. Measuring transitivity of fuzzy pairwise
+comparison matrix{[}C{]}//Proceedings of the 30th International
+Conference Mathematical Methods in Economics. 2012: 751-756.}
+
+\bibitem[\citeproctext]{ref-cavallo2016weak}
+\CSLLeftMargin{{[}37{]} }%
+\CSLRightInline{CAVALLO B, D'APUZZO L, BASILE L. Weak consistency for
+ensuring priority vectors reliability{[}J{]}. J. Multi-Criter. Decis.
+Anal., 2016, 23(3-4): 126-138.}
+
+\bibitem[\citeproctext]{ref-gass1998tournaments}
+\CSLLeftMargin{{[}38{]} }%
+\CSLRightInline{GASS S I. Tournaments, transitivity and pairwise
+comparison matrices{[}J{]}. J. Oper. Res. Soc., 1998, 49(6): 616-624.}
+
+\bibitem[\citeproctext]{ref-ma2006method}
+\CSLLeftMargin{{[}39{]} }%
+\CSLRightInline{MA J, FAN Z P, JIANG Y P, 等. A method for repairing the
+inconsistency of fuzzy preference relations{[}J{]}. Fuzzy Sets Syst.,
+2006, 157(1): 20-33.}
+
+\bibitem[\citeproctext]{ref-kendall1940method}
+\CSLLeftMargin{{[}40{]} }%
+\CSLRightInline{KENDALL M G, SMITH B B. On the method of paired
+comparisons{[}J{]}. Biometrika, 1940, 31(3/4): 324-345.}
+
+\bibitem[\citeproctext]{ref-iida2009ordinality}
+\CSLLeftMargin{{[}41{]} }%
+\CSLRightInline{IIDA Y. Ordinality consistency test about items and
+notation of a pairwise comparison matrix in AHP{[}C{]}//Proceedings of
+the international symposium on the analytic hierarchy process. 2009.}
+
+\bibitem[\citeproctext]{ref-torres2022transitive}
+\CSLLeftMargin{{[}42{]} }%
+\CSLRightInline{TORRES-MANZANERA E, DÍAZ S, CHICLANA F, 等. Transitive
+full covers of incomplete preference relations{[}J{]}. Inf. Fusion,
+2022, 80: 44-55.}
+
+\bibitem[\citeproctext]{ref-faramondi2020incomplete}
+\CSLLeftMargin{{[}43{]} }%
+\CSLRightInline{FARAMONDI L, OLIVA G, BOZÓKI S. Incomplete analytic
+hierarchy process with minimum weighted ordinal violations{[}J{]}. Int.
+J. Gen. Syst., 2020, 49(6): 574-601.}
+
+\bibitem[\citeproctext]{ref-agoston2024lexicographically}
+\CSLLeftMargin{{[}44{]} }%
+\CSLRightInline{ÁGOSTON K C, CSATÓ L. A lexicographically optimal
+completion for pairwise comparison matrices with missing entries{[}J{]}.
+Eur. J. Oper. Res., 2024, 314(3): 1078-1086.}
+
+\bibitem[\citeproctext]{ref-amenta2020transitivity}
+\CSLLeftMargin{{[}45{]} }%
+\CSLRightInline{AMENTA P, LUCADAMO A, MARCARELLI G. On the transitivity
+and consistency approximated thresholds of some consistency indices for
+pairwise comparison matrices{[}J{]}. Inf. Sci., 2020, 507: 274-287.}
+
+\bibitem[\citeproctext]{ref-mi2022transitivity}
+\CSLLeftMargin{{[}46{]} }%
+\CSLRightInline{MI X, LIAO H, ZENG X J. Transitivity and approximate
+consistency threshold determination for reciprocal preference relations
+in group decision making{[}J{]}. J. Oper. Res. Soc., 2022, 73(7):
+1649-1666.}
+
+\bibitem[\citeproctext]{ref-martinetti2017correspondence}
+\CSLLeftMargin{{[}47{]} }%
+\CSLRightInline{MARTINETTI D, MONTES S, DÍAZ S, 等. On the
+correspondence between reciprocal relations and strongly complete fuzzy
+relations{[}J{]}. Fuzzy Sets Syst., 2017, 322: 19-34.}
+
+\bibitem[\citeproctext]{ref-brunelli2013inconsistency}
+\CSLLeftMargin{{[}48{]} }%
+\CSLRightInline{BRUNELLI M, CANAL L, FEDRIZZI M. Inconsistency indices
+for pairwise comparison matrices: a numerical study{[}J{]}. Ann. Oper.
+Res., 2013, 211: 493-509.}
+
+\bibitem[\citeproctext]{ref-rezaei2015best}
+\CSLLeftMargin{{[}49{]} }%
+\CSLRightInline{REZAEI J. Best-worst multi-criteria decision-making
+method{[}J{]}. Omega (Westport), 2015, 53: 49-57.}
+
+\bibitem[\citeproctext]{ref-brunelli2018survey}
+\CSLLeftMargin{{[}50{]} }%
+\CSLRightInline{BRUNELLI M. A survey of inconsistency indices for
+pairwise comparisons{[}J{]}. Int. J. Gen. Syst., 2018, 47(8): 751-771.}
+
+\bibitem[\citeproctext]{ref-liu2020deriving}
+\CSLLeftMargin{{[}51{]} }%
+\CSLRightInline{LIU F, ZOU S C, LI Q. Deriving priorities from pairwise
+comparison matrices with a novel consistency index{[}J{]}. Appl. Math.
+Comput., 2020, 374: 125059.}
+
+\bibitem[\citeproctext]{ref-sato2023inconsistency}
+\CSLLeftMargin{{[}52{]} }%
+\CSLRightInline{SATO Y, TAN K H. Inconsistency indices in pairwise
+comparisons: an improvement of the Consistency Index{[}J{]}. Ann. Oper.
+Res., 2023, 326(2): 809-830.}
+
+\bibitem[\citeproctext]{ref-bortot2023novel}
+\CSLLeftMargin{{[}53{]} }%
+\CSLRightInline{BORTOT S, BRUNELLI M, FEDRIZZI M, 等. A novel
+perspective on the inconsistency indices of reciprocal relations and
+pairwise comparison matrices{[}J{]}. Fuzzy Sets Syst., 2023, 454:
+74-99.}
+
+\bibitem[\citeproctext]{ref-pant2022consistency}
+\CSLLeftMargin{{[}54{]} }%
+\CSLRightInline{PANT S, KUMAR A, RAM M, 等. Consistency indices in
+analytic hierarchy process: a review{[}J{]}. mathematics, 2022, 10(8):
+1206.}
+
+\bibitem[\citeproctext]{ref-fernandes2022efficiency}
+\CSLLeftMargin{{[}55{]} }%
+\CSLRightInline{FERNANDES R, FURTADO S. Efficiency of the principal
+eigenvector of some triple perturbed consistent matrices{[}J{]}. Eur. J.
+Oper. Res., 2022, 298(3): 1007-1015.}
+
+\bibitem[\citeproctext]{ref-dasgupta1996transitivity}
+\CSLLeftMargin{{[}56{]} }%
+\CSLRightInline{DASGUPTA M, DEB R. Transitivity and fuzzy
+preferences{[}J{]}. Soc. Choice Welf., 1996: 305-318.}
+
+\bibitem[\citeproctext]{ref-bouyssou1997acyclic}
+\CSLLeftMargin{{[}57{]} }%
+\CSLRightInline{BOUYSSOU D. Acyclic fuzzy preferences and the Orlovsky
+choice function: a note{[}J{]}. Fuzzy Sets Syst., 1997, 89(1): 107-111.}
+
+\bibitem[\citeproctext]{ref-garcia2004consistency}
+\CSLLeftMargin{{[}58{]} }%
+\CSLRightInline{GARCIA-LAPESTRA J, MONTERO J. Consistency of crisp and
+fuzzy preference relations{[}M{]}. Universit{à} degli Studi di Roma" La
+Sapienzia, 2004.}
+
+\bibitem[\citeproctext]{ref-orlovsky1993decision}
+\CSLLeftMargin{{[}59{]} }%
+\CSLRightInline{ORLOVSKY S. Decision-making with a fuzzy preference
+relation{[}M{]}//Readings in fuzzy sets for intelligent systems.
+Elsevier, 1993: 717-723.}
+
+\bibitem[\citeproctext]{ref-tanino1988fuzzy}
+\CSLLeftMargin{{[}60{]} }%
+\CSLRightInline{TANINO T. Fuzzy preference relations in group decision
+making{[}J{]}. non-conventional preference relations in decision making,
+1988, 301: 54-71.}
+
+\bibitem[\citeproctext]{ref-baets2008similarity}
+\CSLLeftMargin{{[}61{]} }%
+\CSLRightInline{DE BAETS B. Similarity of {Fuzzy Sets} and {Dominance}
+of {Random Variables}: A {Quest} for {Transitivity}{[}M{]}//DELLA RICCIA
+G, DUBOIS D, KRUSE R, 等. Preferences and {Similarities}. Vienna:
+Springer, 2008: 1-22.}
+
+\bibitem[\citeproctext]{ref-koczkodaj2018axiomatization}
+\CSLLeftMargin{{[}62{]} }%
+\CSLRightInline{KOCZKODAJ W W, URBAN R. Axiomatization of inconsistency
+indicators for pairwise comparisons{[}J{]}. Int. J. Approximate
+Reasoning, 2018, 94: 18-29.}
+
+\bibitem[\citeproctext]{ref-de2013generalized}
+\CSLLeftMargin{{[}63{]} }%
+\CSLRightInline{DE MEYER H, DE BAETS B. Generalized Stochastic
+Transitivity{[}J{]}. Adv. Soft Comp., 2013, 26: 273.}
+
+\bibitem[\citeproctext]{ref-aguaron2003geometric}
+\CSLLeftMargin{{[}64{]} }%
+\CSLRightInline{AGUARÓN J, MORENO-JIMÉNEZ J M. The geometric consistency
+index: Approximated thresholds{[}J{]}. Eur. J. Oper. Res., 2003, 147(1):
+137-145.}
+
+\bibitem[\citeproctext]{ref-aguaron2021reducing}
+\CSLLeftMargin{{[}65{]} }%
+\CSLRightInline{AGUARÓN J, ESCOBAR M T, MORENO-JIMÉNEZ J M. Reducing
+inconsistency measured by the geometric consistency index in the
+analytic hierarchy process{[}J{]}. Eur. J. Oper. Res., 2021, 288(2):
+576-583.}
+
+\bibitem[\citeproctext]{ref-zeshui1999consistency}
+\CSLLeftMargin{{[}66{]} }%
+\CSLRightInline{ZESHUI X, CUIPING W. A consistency improving method in
+the analytic hierarchy process{[}J{]}. Eur. J. Oper. Res., 1999, 116(2):
+443-449.}
+
+\bibitem[\citeproctext]{ref-marnowitz1952portfolio}
+\CSLLeftMargin{{[}67{]} }%
+\CSLRightInline{MARNOWITZ H. Portfolio selection{[}J{]}. J. Financ.,
+1952, 7(1): 77-91.}
+
+\bibitem[\citeproctext]{ref-rubinstein2002markowitz}
+\CSLLeftMargin{{[}68{]} }%
+\CSLRightInline{RUBINSTEIN M. Markowitz's" portfolio selection": A
+fifty-year retrospective{[}J{]}. the journal of finance, 2002, 57(3):
+1041-1045.}
+
+\bibitem[\citeproctext]{ref-petturiti2024impact}
+\CSLLeftMargin{{[}69{]} }%
+\CSLRightInline{PETTURITI D, VANTAGGI B. The impact of ambiguity on
+dynamic portfolio selection in the epsilon-contaminated binomial market
+model{[}J{]}. Eur. J. Oper. Res., 2024, 314(3): 1029-1039.}
+
+\bibitem[\citeproctext]{ref-staino2020nested}
+\CSLLeftMargin{{[}70{]} }%
+\CSLRightInline{STAINO A, RUSSO E. Nested conditional value-at-risk
+portfolio selection: A model with temporal dependence driven by
+market-index volatility{[}J{]}. Eur. J. Oper. Res., 2020, 280(2):
+741-753.}
+
+\bibitem[\citeproctext]{ref-zaimovic2021many}
+\CSLLeftMargin{{[}71{]} }%
+\CSLRightInline{ZAIMOVIC A, OMANOVIC A, ARNAUT-BERILO A. How many stocks
+are sufficient for equity portfolio diversification? A review of the
+literature{[}J{]}. journal of risk and financial management, 2021,
+14(11): 551.}
+
+\bibitem[\citeproctext]{ref-alexeev2015equity}
+\CSLLeftMargin{{[}72{]} }%
+\CSLRightInline{ALEXEEV V, DUNGEY M. Equity portfolio diversification
+with high frequency data{[}J{]}. Quant. Financ., 2015, 15(7):
+1205-1215.}
+
+\bibitem[\citeproctext]{ref-akshare}
+\CSLLeftMargin{{[}73{]} }%
+\CSLRightInline{KING A. AKShare{[}M{]}//github repository.
+\url{https://github.com/akfamily/akshare}; GitHub, 2019.}
+
+\end{CSLReferences}
+
+
+
+
+\end{document}
