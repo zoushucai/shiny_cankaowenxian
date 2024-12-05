@@ -1,12 +1,13 @@
 if (!require("pacman")) install.packages("pacman")
 
-# if (!require("remotes")) install.packages("remotes")
-# remotes::install_github("zoushucai/journalabbr")
+if (!require("remotes")) install.packages("remotes")
+remotes::install_github("zoushucai/journalabbr", ref = "dev")
+
 
 pacman::p_load(
   "shiny", "stringr", "stringi", "data.table",
   "rclipboard", "knitr", "rmarkdown", "purrr", "rlang",
-  "tinytex", "DT", "shinydashboard", "journalabbr", "quarto"
+  "tinytex", "DT", "shinydashboard", "quarto", "journalabbr"
 )
 
 options(shiny.sanitize.errors = FALSE)
@@ -137,40 +138,40 @@ ui <- fluidPage(
 
 # Define server logic required to draw a histogram
 server <- function(input, output) {
-
+  
   ### 0. Processing bib, csl, tex files， return dt by read bib
   randomVals <- eventReactive(input$goButton, {
     clear_file()
-
+    
     tryCatch(
       {
         texfile <- input$file1_tex$datapath
         clsfile <- input$file2_csl$datapath
         bibfile <- input$file3_bib$datapath
         csvfile <- input$file4_usercsv$datapath
-
+        
         if (is.null(csvfile)) {
           csvfile <- ""
         }
         if (is.null(texfile) || is.null(clsfile) || is.null(csvfile)) {
           stop("The correct file is not uploaded. Please upload the file again.")
         }
-
-
+        
+        
         # texfile = "C:\\Users\\zscmm\\Documents\\GitHub\\journalabbr\\weak2abbr.tex"
         # clsfile = "C:\\Users\\zscmm\\Documents\\GitHub\\journalabbr\\european-journal-of-operational-research.csl"
         # clsfile = "C:\\Users\\zscmm\\Desktop\\shiny_cankaowenxian\\defalut\\chinese-gb7714-2005-numeric.csl"
         # bibfile = "C:\\Users\\zscmm\\Documents\\GitHub\\journalabbr\\weakabbr.bib"
-
+        
         # 1.  拷贝 bib 和 cls 的文件到 固定的文件中
         if(is_empty(clsfile)){
           clsfile <- system.file("template", "chinese-gb7714-2005-numeric.csl", package = "journalabbr", mustWork = TRUE)
         }
-
+        
         copy_file(clsfile, fixed_clsfile)
-
+        
         copy_file(bibfile, fixed_bibfile_old)
-
+        
         ### 对bib 文件进行处理
         if (input$bibabbr == "onlyabbrjournal") {
           #仅对 journal 进行缩写
@@ -179,13 +180,13 @@ server <- function(input, output) {
           #不进行任何操作
           copy_file(bibfile, fixed_bibfile)
         }
-
+        
         # 2. 从 texfile  文件中提取 ckey
         ckey = extract_key(texfile)
-
+        
         # 3. 提取的 ckey 和固定的模板进行融合,然后导出 pdf, 生成 tex
         generate_qmd(ckey, output = output_qmd)
-
+        
       },
       error = function(e) {
         # return a safeError if a parsing error occurs
@@ -193,18 +194,18 @@ server <- function(input, output) {
         stop(safeError(e))
       }
     )
-
+    
     #提取bib文件中的全部数据
     bibdt <- read_bib2dt(fixed_bibfile, encoding = "UTF-8")
-
+    
     #只提取 tex中引用的 ckey
     citesall_dt = data.table("CKEY" = ckey)
     bibdt0 = merge.data.table(citesall_dt, bibdt, by = "CKEY", all.x = TRUE, sort = FALSE)
-
+    
     return(list("bibdt" = bibdt, "bibdt0" = bibdt0))
   })
-
-
+  
+  
   # 编译 qmd 文件 to tex 文件
   compileqmd <- reactive({
     bibdt <- randomVals()$bibdt
@@ -215,18 +216,18 @@ server <- function(input, output) {
     quarto::quarto_render(output_qmd, output_format = "latex")
     return(bibdt)
   })
-
-
+  
+  
   #从输出的tex文件中提取数据，返回一个数据框
   get_citedt <- reactive({
     bibdt = compileqmd()
     # 1. 读取 tex 文件
     doc = read_tex(output_tex)
-
+    
     # 2. 通过对 doc 进行提取, 找到 body 部分,并进行清洗, 提取出一个 dt_body 数据框, 只含有两列: ckey 和 refvalue
     docbody = extract_body(doc)
     dt_body = extract_citeproc(docbody)
-
+    
     # 3.  通过对 doc 进行提取, 找到 ref 部分,并进行清洗, 提取出一个 dt_ref 数据框, 只含有两列: ckey 和 bibitem
     docref = extract_ref(doc)
     dt_ref = extra_bibitem(docref)
@@ -245,7 +246,7 @@ server <- function(input, output) {
     # \CSLRightInline{CAVALLO B, D'APUZZO L. Ensuring reliability of the
     # weighting vector: Weak consistent pairwise comparison matrices{[}J{]}.
     # Fuzzy Sets Syst., 2016, 296: 21-34.}
-
+    
     clear_fun1_bibitem = function(x){
       # 逐个检测
       x2 = str_extract(x, "(?<=\\\\CSLRightInline\\{)(.*?)(?=\\}$)")
@@ -258,13 +259,13 @@ server <- function(input, output) {
     # inconsistency measured by the geometric consistency index in the
     # analytic hierarchy process. \emph{Eur. J. Oper. Res.}, \emph{288}(2),
     # 576--583.
-
+    
     clear_fun2_bibitem = function(x){
       x2 = str_extract(x, "(?<=\\\\citeproc\\{)(.*?)(?=\\}$)")
       x3 = ifelse(is.na(x2), x, x2)
       return(x3)
     }
-
+    
     if(check_ref_type(dt$refvalue)==1){
       # 数字风格
       dt[, isnum := 1]
@@ -276,32 +277,32 @@ server <- function(input, output) {
       dt[, bibitem2 := clear_fun2_bibitem(bibitem)]
       dt[, value := sprintf("\\bibitem[%s]{%s}{%s}", refvalue, ckey, bibitem2) ]
     }
-
+    
     # clear_file()
     return(dt)
   })
-
+  
   tex_cite_style1 <- reactive({
     dt = get_citedt()
     paste(dt[["value"]], collapse = "\n\n")
   })
-
+  
   #
   # ###########################################################
   # ############ Output warning,----- The key exist in the .tex file, but don't exist in bib file ###############
   output$out_warning <- renderText({
-
+    
     # 捕捉警告信息
     warning_info = capture.output({
       bibdt = compileqmd()
     })
-
+    
     if (length(bibdt) > 1 & !is_empty(bibdt)) {
       return("no warning")
     }else{
       return(warning_info)
     }
-
+    
   })
   # #######################################################
   #
@@ -321,26 +322,45 @@ server <- function(input, output) {
     }
   })
   # #######################################################
-
+  
   # #######################################################
-  output$key01yinyong <- renderText({
-      bibdt0 = randomVals()$bibdt0
-      CKEY = bibdt0$CKEY
-      paste(CKEY, collapse = "\n")
+  
+  
+  text_cite_key <- reactive({
+    bibdt0 = randomVals()$bibdt0
+    CKEY = bibdt0$CKEY
+    return(paste(CKEY, collapse = "\n"))
   })
-
-  output$bib01yinyong <- renderText({
-
-
+  text_cite_bib <- reactive({
     bibdt0 = randomVals()$bibdt0
     write_dt2bib(bibdt0, file = "tempckey.bib")
     bib = readLines("tempckey.bib", encoding = "UTF-8")
     # 删除临时文件
     file.remove("tempckey.bib")
-    paste(bib, collapse = "\n")
+    return(paste(bib, collapse = "\n"))
   })
-
-
+  # 输出到界面
+  
+  output$key01yinyong <- renderText({
+    text_cite_key()
+    
+  })
+  output$bib01yinyong <- renderText({
+    text_cite_bib()
+  })
+  
+  #输出到剪切板
+  output$key01yinyongclip <- renderUI({
+    rclipButton(inputId = "key01yinyongclip", label = "key Copy", clipText = text_cite_key(), icon = icon("clipboard"))
+  })
+  
+  
+  
+  output$bib01yinyongclip <- renderUI({
+    rclipButton(inputId = "bib01yinyongclip", label = "bib Copy", clipText = text_cite_bib(), icon = icon("clipboard"))
+  })
+  
+  
   ######################### Clear all files ###############
   output$out_clear_after <- renderPrint({
     files = list.files(recursive = TRUE)
@@ -350,7 +370,7 @@ server <- function(input, output) {
       return("No files in the directory")
     }
   })
-
+  
   output$clearButton <- eventReactive(input$clearButton, {
     clear_file()
     files = list.files(recursive = TRUE)
@@ -365,8 +385,8 @@ server <- function(input, output) {
                        paste(files, collapse = "\n"))
     return(files_str)
   })
-
-
+  
+  
   ######################### Output journal abbreviation comparison table -- begin ###############
   output$jouranl_abbr <- renderDataTable(
     {
@@ -384,7 +404,7 @@ server <- function(input, output) {
     options = list(pageLength = 100)
   )
   ######################### Output journal abbreviation comparison table -- end ###############
-
+  
   ######################### sessionInfo  ###############
   output$out_runenvir <- renderPrint({
     print(list(
@@ -395,6 +415,10 @@ server <- function(input, output) {
     ))
   })
   ######################### sessionInfo  ###############
+  ## 退出时清除文件
+  onStop(function() {
+    clear_file()
+  })
 }
 
 
