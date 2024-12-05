@@ -1,14 +1,15 @@
 if (!require("pacman")) install.packages("pacman")
 
 if (!require("remotes")) install.packages("remotes")
-remotes::install_github("zoushucai/journalabbr", ref = "dev")
-
 
 pacman::p_load(
   "shiny", "stringr", "stringi", "data.table",
   "rclipboard", "knitr", "rmarkdown", "purrr", "rlang",
   "tinytex", "DT", "shinydashboard", "quarto", "journalabbr"
 )
+remotes::install_github("zoushucai/journalabbr", force = TRUE)
+
+library(journalabbr)
 
 options(shiny.sanitize.errors = FALSE)
 rm(list = ls())

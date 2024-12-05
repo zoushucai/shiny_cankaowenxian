@@ -1,0 +1,12 @@
+name: shiny_cankaowenxian3
+title: shiny_cankaowenxian3
+username: zoushucai
+account: zoushucai
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 13528223
+bundleId: 9466165
+url: https://zoushucai.shinyapps.io/shiny_cankaowenxian3/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
